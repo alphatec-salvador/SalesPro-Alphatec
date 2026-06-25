@@ -10,7 +10,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;font-size:14px}
-@media print{aside,header,.ph .btn,.print-hide,.fs-tabs,.drange-wrap,main,#printDocWrap>div>div:first-child{display:none!important}body{background:#fff;margin:0;padding:0}#printDocWrap{display:block!important;position:static!important;background:transparent!important;padding:0!important;overflow:visible!important}#printDocWrap>div{width:100%!important;max-width:100%!important;box-shadow:none!important;border-radius:0!important}.print-doc{display:block!important}.card,.fs-card,.bs-col,.cf-section{box-shadow:none!important;border:1px solid #ccc!important}}
+@media print{aside,header,.ph .btn,.print-hide,.fs-tabs,.drange-wrap{display:none!important}main{padding:0}body{background:#fff}.card,.fs-card,.bs-col,.cf-section{box-shadow:none!important;border:1px solid #ccc!important}.print-doc{display:block!important}}
 .print-doc{display:none}
 header{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .logo{display:flex;align-items:center;gap:10px}
@@ -646,7 +646,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
     <div class="print-hide" style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0">
       <span style="font-weight:700;color:#374151;font-size:.85rem">📄 Document Preview</span>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print / Save PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="printDocPopup()">🖨️ Print / Save PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="closePrintDoc()">✕ Close</button>
       </div>
     </div>
@@ -1098,6 +1098,37 @@ function printSupplierPO(spoId){
   document.getElementById('printDocWrap').style.display='flex';
 }
 function closePrintDoc(){document.getElementById('printDocWrap').style.display='none';}
+function printDocPopup(){
+  const content=document.getElementById('printDocContent').innerHTML;
+  // Gather inline document styles only (not app chrome)
+  const docCSS=`
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px}
+    .print-doc{max-width:760px;margin:0 auto}
+    .doc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1d4ed8}
+    .doc-company h2{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:4px}
+    .doc-company p{font-size:.78rem;color:#64748b;margin-top:2px}
+    .doc-meta{text-align:right}.doc-meta h3{font-size:.85rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px}
+    .doc-meta p{font-size:.78rem;color:#64748b;margin-top:2px}
+    .doc-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+    .doc-party h4{font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .doc-party p{font-size:.82rem;color:#374151;margin-top:3px}
+    .doc-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .doc-table thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}
+    .doc-table tbody td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#374151}
+    .doc-total-box{background:#f8fafc;border-radius:8px;padding:14px 16px;margin-bottom:16px;border:1px solid #e2e8f0}
+    .total-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem;color:#475569;border-bottom:1px solid #f1f5f9}
+    .total-row.grand{font-size:1rem;font-weight:700;color:#1e293b;border-bottom:none;padding-top:10px;margin-top:4px}
+    .doc-footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:8px}
+    @media print{body{padding:20px}}
+  `;
+  const win=window.open('','_blank','width=860,height=720');
+  if(!win){alert('Please allow popups for this site to print.');return;}
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'</style></head><body>'+content+'</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{win.print();},500);
+}
 
 // ── EXPENSE HELPERS ───────────────────────────────────────
 function fillExpCatSelect(){const s=document.getElementById('eCat');if(s)s.innerHTML=CATS.map(c=>`<option>${c.name}</option>`).join('');}
