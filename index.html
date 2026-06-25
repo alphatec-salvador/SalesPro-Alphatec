@@ -764,7 +764,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="mh"><div><h3>New Client Purchase Order</h3><p>Catalog auto-fills selling prices · PO# is sequential</p></div><button class="mc" onclick="closeModal('mCPO')">✕</button></div>
   <div class="mb">
     <div class="g3">
-      <div class="fg"><label>PO Number</label><input class="fc" id="cN" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div>
+      <div class="fg"><label>PO Number</label><input class="fc" id="cN" style="font-weight:700;color:#1d4ed8"/></div>
       <div class="fg"><label>Client</label><input class="fc" id="cCl"/></div>
       <div class="fg"><label>Date</label><input class="fc" id="cDt" type="date"/></div>
       <div class="fg"><label>Delivery Date</label><input class="fc" id="cDel" type="date"/></div>
@@ -787,7 +787,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="mh"><div><h3>New Supplier Purchase Order</h3><p>Catalog auto-fills purchase costs · Multiple SPOs per CPO supported</p></div><button class="mc" onclick="closeModal('mSPO')">✕</button></div>
   <div class="mb">
     <div class="g3">
-      <div class="fg"><label>PO Number</label><input class="fc" id="sN" readonly style="background:#f1f5f9;font-weight:700;color:#d97706"/></div>
+      <div class="fg"><label>PO Number</label><input class="fc" id="sN" style="font-weight:700;color:#d97706"/></div>
       <div class="fg"><label>Supplier</label><input class="fc" id="sSup"/></div>
       <div class="fg"><label>Date</label><input class="fc" id="sDt" type="date"/></div>
       <div class="fg"><label>Expected Delivery</label><input class="fc" id="sDel" type="date"/></div>
@@ -812,7 +812,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="mb">
     <div class="alert ai">📌 Invoice number auto-assigned: <strong id="nextInvNum">—</strong></div>
     <div class="g3">
-      <div class="fg"><label>Invoice Number</label><input class="fc" id="iN" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div>
+      <div class="fg"><label>Invoice Number</label><input class="fc" id="iN" style="font-weight:700;color:#1d4ed8"/></div>
       <div class="fg"><label>Client PO Ref</label><select class="fc" id="iPO" onchange="fillInvFromPO()"><option value="">— Select PO —</option></select></div>
       <div class="fg"><label>Client</label><input class="fc" id="iCl"/></div>
       <div class="fg"><label>Invoice Date</label><input class="fc" id="iDt" type="date" oninput="autoCalcDueDate()"/></div>
@@ -1705,6 +1705,17 @@ window.sbLoadAll=async function(){
   if(arRecords.length)idAR=Math.max(...arRecords.map(r=>r.id))+1;
   if(apRecords.length)idAP=Math.max(...apRecords.map(r=>r.id))+1;
   if(expenses.length)expId=Math.max(...expenses.map(r=>r.id))+1;
+
+  // Sync seqCounters from highest existing document numbers
+  // Extracts the trailing numeric part from e.g. "CPO-2026-007" → 7
+  const extractSeq=num=>{if(!num)return 0;const m=num.match(/(\d+)$/);return m?+m[1]:0;};
+  if(clientPOs.length)seqCounters['CPO']=Math.max(...clientPOs.map(r=>extractSeq(r.num)));
+  if(supplierPOs.length)seqCounters['SPO']=Math.max(...supplierPOs.map(r=>extractSeq(r.num)));
+  if(invoices.length)seqCounters['INV']=Math.max(...invoices.map(r=>extractSeq(r.num)));
+  // Also sync any custom prefixes found in existing records
+  clientPOs.forEach(r=>{const p=r.num?.split('-')[0];if(p&&p!=='CPO'){const n=extractSeq(r.num);if(!seqCounters[p]||seqCounters[p]<n)seqCounters[p]=n;}});
+  supplierPOs.forEach(r=>{const p=r.num?.split('-')[0];if(p&&p!=='SPO'){const n=extractSeq(r.num);if(!seqCounters[p]||seqCounters[p]<n)seqCounters[p]=n;}});
+  invoices.forEach(r=>{const p=r.num?.split('-')[0];if(p&&p!=='INV'){const n=extractSeq(r.num);if(!seqCounters[p]||seqCounters[p]<n)seqCounters[p]=n;}});
 
   window.sbHideLoader();
   if(loaded>0){
