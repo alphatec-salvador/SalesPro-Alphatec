@@ -45,7 +45,7 @@ window.sbSave = async function(table, row) {
 };
 
 // ── MAP HELPERS ──────────────────────────────────────────────
-const sbMap = {
+window.sbMap = {
   product: r => ({ id:r.id, code:r.code, desc:r.desc, type:r.type, unit:r.unit, group:r.group, sp:r.selling_price||0, pc:r.unit_cost||0, qtyIn:r.qty_in||0, qtyOrd:r.qty_ord||0, qtyAlloc:r.qty_alloc||0, reorder:r.reorder||0 }),
   lead:    r => ({ id:r.id, name:r.name, company:r.company||'', stage:r.stage||'New Lead', value:r.value||0, owner:r.owner||'', lastContact:r.last_contact||'', nextAction:r.next_action||'', status:r.status||'Active' }),
   cpo:     r => ({ id:r.id, num:r.po_number, client:r.client_name, date:r.date||'', status:r.status, terms:r.terms||'', delivery:r.delivery||'', prodTotal:r.prod_total||0, svcTotal:r.svc_total||0, total:r.total_amount||0 }),
