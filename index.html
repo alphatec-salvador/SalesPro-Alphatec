@@ -1076,9 +1076,68 @@ function fsTab(id,el){document.querySelectorAll('.fs-tab').forEach(t=>t.classLis
 
 function openModal(id){
   if(id==='mCompany')openCompanyModal();
-  if(id==='mCPO'){initCL();const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');document.getElementById('cN').value=num;document.getElementById('cDt').value=today();}
-  if(id==='mSPO'){initSL();fillSPOLinked();const num=peekNum(document.getElementById('spoPrefix')?.value||'SPO');document.getElementById('sN').value=num;document.getElementById('sDt').value=today();}
-  if(id==='mInv'){fillInvPOSel();const num=peekNum(document.getElementById('invPrefix')?.value||'INV');document.getElementById('iN').value=num;document.getElementById('nextInvNum').textContent=num;document.getElementById('iDt').value=today();document.getElementById('iPd').value=0;document.getElementById('iAmt').value='';document.getElementById('iBal').value='';document.getElementById('iPO').value='';document.getElementById('iCl').value='';}
+  if(id==='mCPO'){
+    // Only reset form if NOT editing
+    if(!window._cpoEditId){
+      initCL();
+      const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
+      document.getElementById('cN').value=num;
+      document.getElementById('cDt').value=today();
+      document.getElementById('cCl').value='';
+      document.getElementById('cSt').value='Pending';
+      document.querySelector('#mCPO .mh h3').textContent='New Client PO';
+    }
+    // Refresh client datalist
+    const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+    let dl=document.getElementById('dlClients');
+    if(!dl){dl=document.createElement('datalist');dl.id='dlClients';document.body.appendChild(dl);}
+    dl.innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+    const cClEl=document.getElementById('cCl');
+    if(cClEl)cClEl.setAttribute('list','dlClients');
+  }
+  if(id==='mSPO'){
+    if(!window._spoEditId){
+      initSL();fillSPOLinked();
+      const num=peekNum(document.getElementById('spoPrefix')?.value||'SPO');
+      document.getElementById('sN').value=num;
+      document.getElementById('sDt').value=today();
+      document.getElementById('sSup').value='';
+      document.getElementById('sSt').value='Pending';
+      document.querySelector('#mSPO .mh h3').textContent='New Supplier PO';
+    } else {
+      fillSPOLinked();
+    }
+    // Refresh supplier datalist
+    const suppliers=[...new Set(supplierPOs.map(p=>p.supplier).filter(Boolean))].sort();
+    let dl=document.getElementById('dlSuppliers');
+    if(!dl){dl=document.createElement('datalist');dl.id='dlSuppliers';document.body.appendChild(dl);}
+    dl.innerHTML=suppliers.map(s=>`<option value="${s}">`).join('');
+    const sSupEl=document.getElementById('sSup');
+    if(sSupEl)sSupEl.setAttribute('list','dlSuppliers');
+  }
+  if(id==='mInv'){
+    fillInvPOSel();
+    if(!window._invEditId){
+      const num=peekNum(document.getElementById('invPrefix')?.value||'INV');
+      document.getElementById('iN').value=num;
+      document.getElementById('nextInvNum').textContent=num;
+      document.getElementById('iDt').value=today();
+      document.getElementById('iPd').value=0;
+      document.getElementById('iAmt').value='';
+      document.getElementById('iBal').value='';
+      document.getElementById('iPO').value='';
+      document.getElementById('iCl').value='';
+      document.getElementById('iSt').value='Draft';
+      document.querySelector('#mInv .mh h3').textContent='New Invoice';
+    }
+    // Refresh client datalist for invoice
+    const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+    let dl=document.getElementById('dlClientsInv');
+    if(!dl){dl=document.createElement('datalist');dl.id='dlClientsInv';document.body.appendChild(dl);}
+    dl.innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+    const iClEl=document.getElementById('iCl');
+    if(iClEl)iClEl.setAttribute('list','dlClientsInv');
+  }
   if(id==='mAR')fillARSel();if(id==='mAP')fillAPSel();
   if(id==='mExp'){document.getElementById('eRef').value='EXP-'+Date.now().toString().slice(-6);document.getElementById('eDt').value=today();document.getElementById('eMon').selectedIndex=new Date().getMonth();fillExpCatSelect();}
   if(id==='mBudget')renderBudgetForm();
@@ -1086,7 +1145,12 @@ function openModal(id){
   if(id==='mCatMgr')renderCatMgrList();
   document.getElementById(id).classList.add('open');
 }
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='mCPO')window._cpoEditId=null;
+  if(id==='mSPO')window._spoEditId=null;
+  if(id==='mInv')window._invEditId=null;
+}
 
 // ── DATE RANGE ────────────────────────────────────────────
 let dashRange='ytd';
