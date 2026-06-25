@@ -466,7 +466,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 
 <!-- CATALOG -->
 <div class="page" id="pg-catalog">
-  <div class="ph"><div><h2>Product & Service Catalog</h2><p>Master price list with stock tracking</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('catalog')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openModal('mCat')">+ Add Item</button></div></div>
+  <div class="ph"><div><h2>Product & Service Catalog</h2><p>Master price list with stock tracking</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('catalog')">⬇ Export Excel</button><button class="btn btn-ghost" onclick="document.getElementById('xlImportInput').click()">📥 Import Excel</button><input type="file" id="xlImportInput" accept=".xlsx,.xls" style="display:none" onchange="importCatalogFromExcel(this)"/><button class="btn btn-primary" onclick="openModal('mCat')">+ Add Item</button></div></div>
   <div class="toolbar">
     <input type="text" placeholder="🔍 Search items..." id="catSrch" oninput="renderCatalog()"/>
     <select id="catTypeF" onchange="renderCatalog()"><option value="">All Types</option><option>Product</option><option>Service</option></select>
@@ -946,6 +946,59 @@ function stockStatus(c){if(c.type==='Service')return{label:'Service',cls:'stock-
 function toggleStockFields(){const isProduct=document.getElementById('catType').value==='Product';document.getElementById('stockFields').style.display=isProduct?'block':'none';}
 function calcCatMargin(){const sp=+document.getElementById('catSP').value||0,pc=+document.getElementById('catPC').value||0,mg=sp-pc,mgp=sp>0?((mg/sp)*100).toFixed(1):0;document.getElementById('catMgAmt').textContent=fmt(mg);document.getElementById('catMgPct').textContent=mgp+'%';}
 function saveCatalogItem(){const code=document.getElementById('catCode').value.trim(),desc=document.getElementById('catDesc').value.trim();if(!code||!desc){alert('Fill Code and Description.');return;}const isProduct=document.getElementById('catType').value==='Product';const item={id:editingCatId||catId++,code,desc,type:document.getElementById('catType').value,unit:document.getElementById('catUnit').value,group:document.getElementById('catGroup').value,sp:+document.getElementById('catSP').value||0,pc:+document.getElementById('catPC').value||0,qtyIn:isProduct?+document.getElementById('catQtyIn').value||0:0,qtyOrd:isProduct?+document.getElementById('catQtyOrd').value||0:0,qtyAlloc:isProduct?+document.getElementById('catQtyAlloc').value||0:0,reorder:isProduct?+document.getElementById('catReorder').value||0:0};if(editingCatId){catalog=catalog.map(c=>c.id===editingCatId?item:c);editingCatId=null;}else catalog.push(item);logA('📦',`Catalog: ${item.code} — ${item.desc}`);closeModal('mCat');renderCatalog();updateBadges();if(window.sbSave)window.sbSave('products',{id:item.id,code:item.code,desc:item.desc,type:item.type,unit:item.unit,group:item.group,selling_price:item.sp||0,unit_cost:item.pc||0,qty_in:item.qtyIn||0,qty_ord:item.qtyOrd||0,qty_alloc:item.qtyAlloc||0,reorder:item.reorder||0});}
+function importCatalogFromExcel(input){
+  const file=input.files[0];if(!file)return;
+  input.value=''; // reset so same file can be re-imported
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets['Product Catalogue'];
+      if(!ws){alert('Sheet "Product Catalogue" not found. Please use the official import template.');return;}
+      const rows=XLSX.utils.sheet_to_json(ws,{range:2}); // skip 2 header rows (title + instruction), use row 3 as header
+      if(!rows.length){alert('No data found in the sheet.');return;}
+      let added=0,updated=0,skipped=0;
+      const sbRows=[];
+      rows.forEach(r=>{
+        const code=(r['CODE']||'').toString().trim();
+        const desc=(r['DESCRIPTION']||'').toString().trim();
+        const type=(r['TYPE']||'Product').toString().trim();
+        const unit=(r['UNIT']||'pc').toString().trim();
+        const group=(r['GROUP']||'').toString().trim();
+        const sp=parseFloat(r['SELLING PRICE (₱)'])||0;
+        const pc=parseFloat(r['UNIT COST (₱)'])||0;
+        if(!code||!desc){skipped++;return;}
+        const existing=catalog.find(c=>c.code===code);
+        if(existing){
+          existing.desc=desc;existing.type=type;existing.unit=unit;
+          existing.group=group;existing.sp=sp;existing.pc=pc;
+          sbRows.push({id:existing.id,code,desc,type,unit,group,selling_price:sp,unit_cost:pc,qty_in:existing.qtyIn||0,qty_ord:existing.qtyOrd||0,qty_alloc:existing.qtyAlloc||0,reorder:existing.reorder||0});
+          updated++;
+        } else {
+          const newItem={id:catId++,code,desc,type,unit,group,sp,pc,qtyIn:0,qtyOrd:0,qtyAlloc:0,reorder:0};
+          catalog.push(newItem);
+          sbRows.push({id:newItem.id,code,desc,type,unit,group,selling_price:sp,unit_cost:pc,qty_in:0,qty_ord:0,qty_alloc:0,reorder:0});
+          added++;
+        }
+      });
+      renderCatalog();updateBadges();
+      // Bulk save to Supabase
+      if(window._sbDb&&sbRows.length){
+        window.sbShowLoader('Saving '+sbRows.length+' items to Supabase...');
+        Promise.all(sbRows.map(r=>window._sbDb.from('products').upsert(r,{onConflict:'id'}))).then(results=>{
+          window.sbHideLoader();
+          const errors=results.filter(r=>r.error).length;
+          if(errors) window.sbToast('⚠️ '+errors+' items failed to save','#dc2626');
+          else window.sbToast('✅ Import complete: '+added+' added, '+updated+' updated','#16a34a');
+        });
+      } else {
+        window.sbToast('✅ Import complete: '+added+' added, '+updated+' updated'+(skipped?' ('+skipped+' skipped)':''),'#16a34a');
+      }
+      logA('📥','Catalogue import: '+added+' added, '+updated+' updated');
+    }catch(err){alert('Import error: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
 function editCatalogItem(id){const c=catalog.find(x=>x.id===id);if(!c)return;editingCatId=id;document.getElementById('mCatTitle').textContent='Edit Catalog Item';document.getElementById('catCode').value=c.code;document.getElementById('catDesc').value=c.desc;document.getElementById('catType').value=c.type;document.getElementById('catUnit').value=c.unit;document.getElementById('catGroup').value=c.group||'';document.getElementById('catSP').value=c.sp;document.getElementById('catPC').value=c.pc;document.getElementById('catQtyIn').value=c.qtyIn||0;document.getElementById('catQtyOrd').value=c.qtyOrd||0;document.getElementById('catQtyAlloc').value=c.qtyAlloc||0;document.getElementById('catReorder').value=c.reorder||0;calcCatMargin();toggleStockFields();openModal('mCat');}
 function renderCatalog(){
   const s=(document.getElementById('catSrch').value||'').toLowerCase(),t=document.getElementById('catTypeF').value,sf=document.getElementById('catStockF').value;
