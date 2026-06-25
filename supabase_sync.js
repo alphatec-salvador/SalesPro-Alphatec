@@ -155,7 +155,7 @@ window.addEventListener('load', function() {
   setTimeout(function() {
     console.log('[SB] Boot loading from Supabase...');
     window.sbLoadAll();
-  }, 800);
+  }, 2500);
 });
 
 // ── FIX: closePrintDoc ────────────────────────────────────
