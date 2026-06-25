@@ -1,162 +1,171 @@
-// SalesOps Pro — Supabase Sync v2.0
+// SalesOps Pro — Supabase Sync v2.1 FIXED
 // Alphatec Trading OPC
 
 const SUPABASE_URL = 'https://dbmlmwpjvrcnzbyzsyrl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRibWxtd3BqdnJjbnpieXpzeXJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNTg3MTQsImV4cCI6MjA5NzkzNDcxNH0.vez8xEuNIgm3Flkix2fBXy1Q6nQamu0YJG6w4Ttr9sk';
 
-// ── TOAST NOTIFICATION ───────────────────────────────────────
+// Initialize Supabase client safely
+window._sbDb = null;
+(function initSupabase() {
+  try {
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+      window._sbDb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      console.log('[SB] Supabase connected ✓');
+    } else {
+      console.error('[SB] Supabase CDN not loaded yet');
+    }
+  } catch(e) {
+    console.error('[SB] Init error:', e.message);
+  }
+})();
+
+// — TOAST NOTIFICATION ————————————————————————
 function sbToast(msg, color) {
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:'+(color||'#1e40af')+';color:#fff;padding:10px 22px;border-radius:8px;font-size:.85rem;font-weight:600;font-family:sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;transition:opacity .3s';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.style.opacity = '1');
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+  try {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:'+(color||'#1e40af')+';color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transition:opacity 0.3s';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.style.opacity = '1');
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+  } catch(e) {}
 }
 
-// ── LOADER ───────────────────────────────────────────────────
+// — LOADER ————————————————————————————————————
 function sbShowLoader(msg) {
-  let el = document.getElementById('sbLoader');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'sbLoader';
-    el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.75);z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
-    el.innerHTML = '<div style="width:52px;height:52px;border:5px solid #1e40af;border-top-color:#f59e0b;border-radius:50%;animation:sbSpin 0.8s linear infinite"></div><div id="sbMsg" style="color:#fff;font-size:1rem;font-weight:600;font-family:sans-serif"></div><style>@keyframes sbSpin{to{transform:rotate(360deg)}}</style>';
-    document.body.appendChild(el);
-  }
-  document.getElementById('sbMsg').textContent = msg;
-  el.style.display = 'flex';
+  try {
+    let el = document.getElementById('sbLoader');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'sbLoader';
+      el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.75);z-index:99998;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-direction:column;gap:12px';
+      el.innerHTML = '<div style="width:40px;height:40px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div><div id="sbLoaderMsg"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+      document.body.appendChild(el);
+    }
+    const m = document.getElementById('sbLoaderMsg');
+    if (m) m.textContent = msg || 'Saving...';
+    el.style.display = 'flex';
+  } catch(e) {}
 }
 
 function sbHideLoader() {
-  const el = document.getElementById('sbLoader');
-  if (el) el.style.display = 'none';
+  try {
+    const el = document.getElementById('sbLoader');
+    if (el) el.style.display = 'none';
+  } catch(e) {}
 }
 
-// ── GLOBAL SAVE FUNCTION (called from index.html) ────────────
+// — TABLE MAP (maps table names to row-builder functions) ————————
+window.sbMap = {
+  product:  r => ({ id:r.id, code:r.code, desc:r.desc, type:r.type, unit:r.unit, group:r.group, sp:r.selling_price||0, cost:r.cost||0 }),
+  lead:     r => ({ id:r.id, name:r.name, company:r.company||'', stage:r.stage||'New Lead', value:r.value||0, owner:r.owner||'', notes:r.notes||'' }),
+  cpo:      r => ({ id:r.id, num:r.po_number, client:r.client_name, date:r.date||'', status:r.status, terms:r.terms||'', linked:r.linked_cpo||'', date_delivery:r.date_delivery||'' }),
+  spo:      r => ({ id:r.id, num:r.po_number, supplier:r.supplier_name, linked:r.linked_cpo||'', date:r.date||'', date_delivery:r.date_delivery||'' }),
+  invoice:  r => ({ id:r.id, num:r.invoice_number, client:r.client_name, poRef:r.po_ref||'', date:r.date||'', due:r.due_date||'', amount:r.amount||0, paid:r.paid||0, status:r.status||'unpaid' }),
+  expense:  r => ({ id:r.id, ref:r.ref, date:r.date||'', month:r.month||'', cat:r.category||'', desc:r.description||'', amount:r.amount||0 }),
+  payment:  r => ({ id:r.id, ref:r.ref, date:r.date||'', client:r.client||'', amount:r.amount||0, method:r.method||'', linked_inv:r.linked_inv||'' }),
+  settings: r => ({ id:r.id||1, company:r.company||'', address:r.address||'', tin:r.tin||'', terms:r.terms||'' })
+};
+
+// — GLOBAL SAVE ————————————————————————————————
 window.sbSave = async function(table, row) {
+  if (!window._sbDb) { sbToast('⚠️ Supabase not connected', '#dc2626'); return false; }
   try {
     const { error } = await window._sbDb.from(table).upsert(row, { onConflict: 'id' });
-    if (error) { sbToast('⚠️ Save failed: ' + error.message, '#dc2626'); return; }
-    sbToast('💾 Saved');
+    if (error) { sbToast('⚠️ Save failed: ' + error.message, '#dc2626'); return false; }
+    sbToast('💾 Saved!');
+    return true;
   } catch(e) {
     sbToast('⚠️ Error: ' + e.message, '#dc2626');
+    return false;
   }
 };
 
-// ── MAP HELPERS ──────────────────────────────────────────────
-window.sbMap = {
-  product: r => ({ id:r.id, code:r.code, desc:r.desc, type:r.type, unit:r.unit, group:r.group, sp:r.selling_price||0, pc:r.unit_cost||0, qtyIn:r.qty_in||0, qtyOrd:r.qty_ord||0, qtyAlloc:r.qty_alloc||0, reorder:r.reorder||0 }),
-  lead:    r => ({ id:r.id, name:r.name, company:r.company||'', stage:r.stage||'New Lead', value:r.value||0, owner:r.owner||'', lastContact:r.last_contact||'', nextAction:r.next_action||'', status:r.status||'Active' }),
-  cpo:     r => ({ id:r.id, num:r.po_number, client:r.client_name, date:r.date||'', status:r.status, terms:r.terms||'', delivery:r.delivery||'', prodTotal:r.prod_total||0, svcTotal:r.svc_total||0, total:r.total_amount||0 }),
-  spo:     r => ({ id:r.id, num:r.po_number, supplier:r.supplier_name, linked:r.linked_cpo||'', date:r.date||'', delivery:r.delivery||'', status:r.status, lines:r.lines||[{type:'product'}], total:r.total_amount||0, paid:r.paid||0, balance:r.balance||0 }),
-  invoice: r => ({ id:r.id, num:r.invoice_number, client:r.client_name, poRef:r.po_ref||'', date:r.date||'', due:r.due_date||'', terms:r.terms||'', amount:r.total_amount||0, paid:r.amount_paid||0, balance:(r.total_amount||0)-(r.amount_paid||0), status:r.status }),
-  expense: r => ({ id:r.id, ref:r.ref, date:r.date||'', month:r.month||'', cat:r.category||'', desc:r.description||'', payee:r.payee||'', amount:r.amount||0, mode:r.payment_mode||'', status:r.status||'Pending' }),
-};
-
-// ── LOAD ALL DATA ────────────────────────────────────────────
-async function sbLoadAll(db) {
-  sbShowLoader('Loading your data…');
+// — GLOBAL LOAD ALL ————————————————————————————
+window.sbLoadAll = async function(db) {
+  if (!window._sbDb) { console.warn('[SB] Not connected, using local data'); return false; }
+  sbShowLoader('Loading data from cloud...');
+  let loaded = 0;
   try {
-    const [
-      {data:pR,error:e1},{data:lR,error:e2},{data:cR,error:e3},
-      {data:sR,error:e4},{data:iR,error:e5},{data:eR,error:e6}
-    ] = await Promise.all([
-      db.from('products').select('*').order('id'),
-      db.from('leads').select('*').order('id'),
-      db.from('client_pos').select('*').order('id'),
-      db.from('supplier_pos').select('*').order('id'),
-      db.from('invoices').select('*').order('id'),
-      db.from('expenses').select('*').order('id'),
-    ]);
-
-    const err = e1||e2||e3||e4||e5||e6;
-    if (err) throw new Error(err.message);
-
-    if (pR && pR.length) window.catalog     = pR.map(sbMap.product);
-    if (lR && lR.length) window.leads       = lR.map(sbMap.lead);
-    if (cR && cR.length) window.clientPOs   = cR.map(sbMap.cpo);
-    if (sR && sR.length) window.supplierPOs = sR.map(sbMap.spo);
-
-    if (iR && iR.length) {
-      window.invoices = iR.map(sbMap.invoice);
-      window.arRecords = window.invoices.map((v,i) => ({
-        id:i+1, ref:'AR-'+String(i+1).padStart(3,'0'),
-        invNum:v.num, client:v.client, invDate:v.date, dueDate:v.due,
-        amount:v.amount, paid:v.paid, balance:v.balance,
-        status:v.balance===0?'Paid':v.status==='Overdue'?'Overdue':v.paid>0?'Partially Paid':'Outstanding'
-      }));
+    const tables = Object.keys(window.sbMap);
+    for (const table of tables) {
+      try {
+        const { data, error } = await window._sbDb.from(table).select('*');
+        if (!error && data && data.length > 0) {
+          // Map to the app's expected format
+          const mapped = data.map(window.sbMap[table]);
+          // Store in the app's data object if it exists
+          if (db && db[table] !== undefined) {
+            db[table] = mapped;
+            loaded++;
+          } else if (db) {
+            // Try common plural/singular variations
+            const keys = [table, table+'s', table.replace(/s$/,'')];
+            for (const k of keys) {
+              if (db[k] !== undefined) { db[k] = mapped; loaded++; break; }
+            }
+          }
+        }
+      } catch(tableErr) {
+        console.warn('[SB] Could not load table:', table, tableErr.message);
+      }
     }
-
-    if (sR && sR.length) {
-      window.apRecords = window.supplierPOs.map((v,i) => ({
-        id:i+1, ref:'AP-'+String(i+1).padStart(3,'0'),
-        spoNum:v.num, supplier:v.supplier, billDate:v.date, dueDate:v.date,
-        amount:v.total, paid:v.paid, balance:v.balance,
-        status:v.balance===0?'Paid':v.paid>0?'Partially Paid':'Outstanding'
-      }));
-    }
-
-    if (eR && eR.length) window.expenses = eR.map(sbMap.expense);
-
-    // Re-render all modules
-    ['renderCatalog','renderLeads','renderCPO','renderSPO','renderInv',
-     'renderExp','renderAR','renderAP','updateBadges','refreshDash'
-    ].forEach(fn => { try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
-
     sbHideLoader();
-    sbToast('✅ Data loaded', '#16a34a');
-
-  } catch(err) {
-    sbHideLoader();
-    sbToast('⚠️ Load error: ' + err.message, '#dc2626');
-    console.error('[SB] Load error:', err);
-  }
-}
-
-// ── MIGRATE SAMPLE DATA (first run only) ────────────────────
-async function sbMigrate(db) {
-  sbShowLoader('First run — saving data…');
-  try {
-    await db.from('products').upsert(window.catalog.map(c=>({id:c.id,code:c.code,desc:c.desc,type:c.type,unit:c.unit,group:c.group,selling_price:c.sp||0,unit_cost:c.pc||0,qty_in:c.qtyIn||0,qty_ord:c.qtyOrd||0,qty_alloc:c.qtyAlloc||0,reorder:c.reorder||0})),{onConflict:'id'});
-    await db.from('leads').upsert(window.leads.map(l=>({id:l.id,name:l.name,company:l.company||'',stage:l.stage,value:l.value||0,owner:l.owner||'',last_contact:l.lastContact||null,next_action:l.nextAction||'',status:l.status||'Active'})),{onConflict:'id'});
-    await db.from('client_pos').upsert(window.clientPOs.map(p=>({id:p.id,po_number:p.num,client_name:p.client,date:p.date||null,status:p.status,terms:p.terms||'',delivery:p.delivery||null,prod_total:p.prodTotal||0,svc_total:p.svcTotal||0,total_amount:p.total||0})),{onConflict:'id'});
-    await db.from('supplier_pos').upsert(window.supplierPOs.map(s=>({id:s.id,po_number:s.num,supplier_name:s.supplier,linked_cpo:s.linked||null,date:s.date||null,delivery:s.delivery||null,status:s.status,lines:s.lines||[{type:'product'}],total_amount:s.total||0,paid:s.paid||0,balance:s.balance||0})),{onConflict:'id'});
-    await db.from('invoices').upsert(window.invoices.map(i=>({id:i.id,invoice_number:i.num,client_name:i.client,po_ref:i.poRef||null,date:i.date||null,due_date:i.due||null,terms:i.terms||'',total_amount:i.amount||0,amount_paid:i.paid||0,status:i.status})),{onConflict:'id'});
-    await db.from('expenses').upsert(window.expenses.map(e=>({id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',amount:e.amount||0,payment_mode:e.mode||'',status:e.status||'Approved'})),{onConflict:'id'});
-    sbHideLoader();
-    sbToast('✅ Sample data saved!', '#16a34a');
-  } catch(err) {
-    sbHideLoader();
-    sbToast('⚠️ Migration error: ' + err.message, '#dc2626');
-    console.error('[SB] Migration error:', err);
-  }
-}
-
-// ── BOOT ─────────────────────────────────────────────────────
-// Simple: just wait for the page to fully load, then start
-window.addEventListener('load', async function() {
-  // Confirm Supabase CDN loaded
-  if (!window.supabase || !window.supabase.createClient) {
-    sbToast('⚠️ Supabase library not loaded', '#dc2626');
-    console.error('[SB] window.supabase not found');
-    return;
-  }
-
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  window._sbDb = db; // make available to sbSave
-
-  try {
-    const { data, error } = await db.from('leads').select('id').limit(1);
-    if (error) throw new Error(error.message);
-
-    if (!data || data.length === 0) {
-      await sbMigrate(db);
+    if (loaded > 0) {
+      sbToast('☁️ ' + loaded + ' tables loaded from Supabase');
+      console.log('[SB] Loaded', loaded, 'tables');
     } else {
-      await sbLoadAll(db);
+      console.log('[SB] Connected but no cloud data yet — using local data');
     }
-  } catch(err) {
-    sbToast('⚠️ DB init failed: ' + err.message, '#dc2626');
-    console.error('[SB] Init error:', err);
+    return true;
+  } catch(e) {
+    sbHideLoader();
+    console.error('[SB] Load error:', e.message);
+    return false;
   }
-});
+};
+
+// — MIGRATION (safe, non-crashing) ————————————————
+window.sbMigrate = async function(db) {
+  if (!window._sbDb) { console.warn('[SB] Not connected, skipping migration'); return false; }
+  if (!db || typeof db !== 'object') { console.warn('[SB] No db object provided'); return false; }
+  sbShowLoader('Syncing to cloud...');
+  let saved = 0;
+  try {
+    const tableKeyMap = {
+      product:  ['products','product'],
+      lead:     ['leads','lead'],
+      cpo:      ['clientPOs','cpos','cpo'],
+      spo:      ['supplierPOs','spos','spo'],
+      invoice:  ['invoices','invoice'],
+      expense:  ['expenses','expense'],
+      payment:  ['payments','payment'],
+      settings: ['settings','setting']
+    };
+    for (const [table, keys] of Object.entries(tableKeyMap)) {
+      let rows = null;
+      for (const k of keys) {
+        if (db[k] && Array.isArray(db[k]) && db[k].length > 0) { rows = db[k]; break; }
+      }
+      if (!rows || rows.length === 0) continue;
+      try {
+        const mapped = rows.map(window.sbMap[table]);
+        const { error } = await window._sbDb.from(table).upsert(mapped, { onConflict: 'id' });
+        if (!error) { saved += rows.length; }
+        else { console.warn('[SB] Migration error on', table, ':', error.message); }
+      } catch(tableErr) {
+        console.warn('[SB] Could not migrate table:', table, tableErr.message);
+      }
+    }
+    sbHideLoader();
+    sbToast('☁️ Migrated ' + saved + ' records to Supabase');
+    console.log('[SB] Migration complete:', saved, 'records');
+    return true;
+  } catch(e) {
+    sbHideLoader();
+    console.error('[SB] Migration failed:', e.message);
+    return false;
+  }
+};
+
+console.log('[SB] supabase_sync.js loaded ✓ | sbSave:', typeof window.sbSave, '| sbMap:', typeof window.sbMap);
