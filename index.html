@@ -489,9 +489,10 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 
 <!-- LEADS -->
 <div class="page" id="pg-leads">
-  <div class="ph"><div><h2>Lead Monitor</h2></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('leads')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openModal('mLead')">+ New Lead</button></div></div>
+  <div class="ph"><div><h2>Lead Monitor</h2></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('leads')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openNewLead()">+ New Lead</button></div></div>
   <div class="toolbar"><input type="text" placeholder="🔍 Search..." id="lSrch" oninput="renderLeads()"/><select id="lStgF" onchange="renderLeads()"><option value="">All Stages</option><option>New Lead</option><option>Qualified</option><option>Proposal</option><option>Negotiation</option><option>Closed Won</option><option>Closed Lost</option></select></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Lead / Company</th><th>Stage</th><th>Deal Value</th><th>Owner</th><th>Last Contact</th><th>Next Action</th><th>Status</th><th></th></tr></thead><tbody id="leadsTbl"></tbody></table></div></div>
+  <div class="cr2" style="margin-bottom:16px"><div class="cb"><h4>Pipeline by Stage (Value)</h4><canvas id="cLeadPipeline" height="160"></canvas></div><div class="cb"><h4>Pipeline by Stage (Count)</h4><div id="leadStageCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:4px"></div></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Lead / Company</th><th>Stage</th><th>Deal Value</th><th>Owner</th><th>Last Contact</th><th>Next Action</th><th>Linked CPO</th><th>Status</th><th></th></tr></thead><tbody id="leadsTbl"></tbody></table></div></div>
 </div>
 
 <!-- CLIENT PO -->
@@ -872,16 +873,51 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 </div>
 <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mExp')">Cancel</button><button class="btn btn-primary" onclick="saveExp()">Save</button></div></div></div>
 
+
+<!-- AR Edit Modal -->
+<div class="modal-overlay" id="mEditAR"><div class="modal"><div class="mh"><div><h3>Edit AR Record</h3></div><button class="mc" onclick="closeModal('mEditAR')">✕</button></div>
+<div class="mb"><div class="g3">
+  <div class="fg"><label>AR Ref</label><input class="fc" id="arEditRef" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div>
+  <div class="fg"><label>Invoice #</label><input class="fc" id="arEditInv" readonly style="background:#f1f5f9"/></div>
+  <div class="fg"><label>Client</label><input class="fc" id="arEditClient" readonly style="background:#f1f5f9"/></div>
+  <div class="fg"><label>Invoice Date</label><input class="fc" id="arEditInvDate" type="date"/></div>
+  <div class="fg"><label>Due Date</label><input class="fc" id="arEditDue" type="date"/></div>
+  <div class="fg"><label>Status</label><select class="fc" id="arEditStatus"><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div>
+  <div class="fg"><label>Amount (₱)</label><input class="fc" id="arEditAmt" type="number"/></div>
+  <div class="fg"><label>Paid (₱)</label><input class="fc" id="arEditPaid" type="number" oninput="arEditCalcBal()"/></div>
+  <div class="fg"><label>Balance</label><input class="fc" id="arEditBal" readonly style="background:#f1f5f9"/></div>
+</div></div>
+<div class="mf"><button class="btn btn-ghost" onclick="closeModal('mEditAR')">Cancel</button><button class="btn btn-success" onclick="saveAREdit()">Save Changes</button></div></div></div>
+
+<!-- AP Edit Modal -->
+<div class="modal-overlay" id="mEditAP"><div class="modal"><div class="mh"><div><h3>Edit AP Record</h3></div><button class="mc" onclick="closeModal('mEditAP')">✕</button></div>
+<div class="mb"><div class="g3">
+  <div class="fg"><label>AP Ref</label><input class="fc" id="apEditRef" readonly style="background:#f1f5f9;font-weight:700;color:#d97706"/></div>
+  <div class="fg"><label>SPO #</label><input class="fc" id="apEditSpo" readonly style="background:#f1f5f9"/></div>
+  <div class="fg"><label>Supplier</label><input class="fc" id="apEditSupplier" readonly style="background:#f1f5f9"/></div>
+  <div class="fg"><label>Bill Date</label><input class="fc" id="apEditBillDate" type="date"/></div>
+  <div class="fg"><label>Due Date</label><input class="fc" id="apEditDue" type="date"/></div>
+  <div class="fg"><label>Status</label><select class="fc" id="apEditStatus"><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div>
+  <div class="fg"><label>Amount (₱)</label><input class="fc" id="apEditAmt" type="number"/></div>
+  <div class="fg"><label>Paid (₱)</label><input class="fc" id="apEditPaid" type="number" oninput="apEditCalcBal()"/></div>
+  <div class="fg"><label>Balance</label><input class="fc" id="apEditBal" readonly style="background:#f1f5f9"/></div>
+</div></div>
+<div class="mf"><button class="btn btn-ghost" onclick="closeModal('mEditAP')">Cancel</button><button class="btn btn-success" onclick="saveAPEdit()">Save Changes</button></div></div></div>
+
 <!-- Lead -->
-<div class="modal-overlay" id="mLead"><div class="modal"><div class="mh"><div><h3>New Lead</h3></div><button class="mc" onclick="closeModal('mLead')">✕</button></div>
+<div class="modal-overlay" id="mLead"><div class="modal"><div class="mh"><div><h3 id="mLeadTitle">New Lead</h3></div><button class="mc" onclick="closeModal('mLead')">✕</button></div>
 <div class="mb"><div class="g3">
   <div class="fg"><label>Name</label><input class="fc" id="lN"/></div>
   <div class="fg"><label>Company</label><input class="fc" id="lC"/></div>
-  <div class="fg"><label>Stage</label><select class="fc" id="lSt"><option>New Lead</option><option>Qualified</option><option>Proposal</option><option>Negotiation</option><option>Closed Won</option></select></div>
+  <div class="fg"><label>Stage</label><select class="fc" id="lSt"><option>New Lead</option><option>Qualified</option><option>Proposal</option><option>Negotiation</option><option>Closed Won</option><option>Closed Lost</option></select></div>
   <div class="fg"><label>Deal Value (₱)</label><input class="fc" id="lV" type="number"/></div>
   <div class="fg"><label>Owner</label><input class="fc" id="lO"/></div>
   <div class="fg"><label>Last Contact</label><input class="fc" id="lLC" type="date"/></div>
-</div><div class="fg" style="margin-top:10px"><label>Next Action</label><input class="fc" id="lNA"/></div></div>
+</div>
+<div class="g2" style="margin-top:10px">
+  <div class="fg"><label>Next Action</label><input class="fc" id="lNA"/></div>
+  <div class="fg"><label>Link to Client PO (if won)</label><select class="fc" id="lCPO"><option value="">— None —</option></select></div>
+</div></div>
 <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mLead')">Cancel</button><button class="btn btn-primary" onclick="saveLead()">Save</button></div></div></div>
 
 <script>
@@ -1300,8 +1336,8 @@ function saveInv(){const n=document.getElementById('iN').value.trim(),cl=documen
 function renderInv(){const s=(document.getElementById('iSrch').value||'').toLowerCase(),st=document.getElementById('iStF').value;const f=invoices.filter(i=>(!s||(i.num+i.client).toLowerCase().includes(s))&&(!st||i.status===st));document.getElementById('invTbl').innerHTML=f.length?f.map(i=>`<tr><td style="font-weight:600;color:#1d4ed8">${i.num}</td><td>${i.poRef?`<span class="badge bb">${i.poRef}</span>`:'—'}</td><td>${i.client}</td><td>${i.date||'—'}</td><td>${i.due||'—'}</td><td style="font-size:.75rem;color:#64748b">${i.terms||'—'}</td><td style="font-weight:600">${fmt(i.amount)}</td><td style="color:#16a34a">${fmt(i.paid)}</td><td style="color:${i.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(i.balance)}</td><td><span class="badge ${sbMap[i.status]||'bgr'}">${i.status}</span></td><td style="display:flex;gap:4px;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="viewInv(${i.id})">👁 View</button><button class="btn btn-ghost btn-sm" onclick="editInv(${i.id})">✏️</button><button class="btn btn-ghost btn-sm" onclick="printInvoice(${i.id})">🖨️</button><button class="btn btn-danger" onclick="deleteInv(${i.id})">✕</button></td></tr>`).join(''):`<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px">No invoices.</td></tr>`;document.getElementById('iFА').textContent=fmt(f.reduce((a,i)=>a+i.amount,0));document.getElementById('iFP').textContent=fmt(f.reduce((a,i)=>a+i.paid,0));document.getElementById('iFB').textContent=fmt(f.reduce((a,i)=>a+i.balance,0));}
 
 // ── LEADS ─────────────────────────────────────────────────
-function saveLead(){const n=document.getElementById('lN').value.trim();if(!n)return;const _nl={id:++idL,name:n,company:document.getElementById('lC').value,stage:document.getElementById('lSt').value,value:+document.getElementById('lV').value||0,owner:document.getElementById('lO').value,lastContact:document.getElementById('lLC').value,nextAction:document.getElementById('lNA').value,status:'Active'};leads.push(_nl);logA('🎯',`Lead: ${n}`);closeModal('mLead');renderLeads();updateBadges();if(window.sbSave)window.sbSave('leads',{id:_nl.id,name:_nl.name,company:_nl.company||'',stage:_nl.stage,value:_nl.value||0,owner:_nl.owner||'',last_contact:_nl.lastContact||null,next_action:_nl.nextAction||'',status:'Active'});}
-function renderLeads(){const s=(document.getElementById('lSrch').value||'').toLowerCase(),st=document.getElementById('lStgF').value;const f=leads.filter(l=>(!s||(l.name+l.company).toLowerCase().includes(s))&&(!st||l.stage===st));document.getElementById('leadsTbl').innerHTML=f.length?f.map(l=>`<tr><td><div style="font-weight:600">${l.name}</div><div style="font-size:.72rem;color:#94a3b8">${l.company}</div></td><td><span class="badge ${sbMap[l.stage]||'bgr'}">${l.stage}</span></td><td style="font-weight:600">${fmt(l.value)}</td><td>${l.owner||'—'}</td><td>${l.lastContact||'—'}</td><td style="font-size:.75rem;color:#475569">${l.nextAction||'—'}</td><td><span class="badge bg">Active</span></td><td><button class="btn btn-danger" onclick="deleteLead(${l.id})">✕</button></td></tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No leads.</td></tr>`;}
+// saveLead moved to lead edit section above
+// renderLeads moved to lead edit section above
 
 // ── AR ────────────────────────────────────────────────────
 function renderAgingCards(recs,type,cid){const bkts=getAgingBuckets(type);const b=[0,0,0,0,0];recs.filter(r=>r.balance>0).forEach(r=>{const d=dd(today(),r.dueDate||today());if(d<=0)b[0]+=r.balance;else if(d<=bkts[0])b[1]+=r.balance;else if(d<=bkts[1])b[2]+=r.balance;else if(d<=bkts[2])b[3]+=r.balance;else b[4]+=r.balance;});const labels=['Current',`1-${bkts[0]}d`,`${bkts[0]+1}-${bkts[1]}d`,`${bkts[1]+1}-${bkts[2]}d`,`${bkts[2]}d+`];const cls=['acc','ac30','ac60','ac90','acov'];document.getElementById(cid).innerHTML=labels.map((l,i)=>`<div class="ac ${cls[i]}"><label>${l}</label><div class="av">${fmt(b[i])}</div><div class="as3">${i===0?'Not due':'Past due'}</div></div>`).join('');return b;}
@@ -1310,7 +1346,7 @@ function fillARM(){const r=arRecords.find(x=>x.id===+document.getElementById('ar
 function saveARPay(){const sel=+document.getElementById('arSel').value,amt=+document.getElementById('arMAmt').value||0;if(!sel||!amt)return;const r=arRecords.find(x=>x.id===sel);if(!r)return;r.paid+=amt;r.balance=Math.max(0,r.balance-amt);r.status=r.balance===0?'Paid':'Partially Paid';// Update matching invoice paid/balance
 const inv=invoices.find(i=>i.num===r.invNum);if(inv){inv.paid=(inv.paid||0)+amt;inv.balance=Math.max(0,inv.amount-inv.paid);inv.status=inv.balance===0?'Paid':inv.paid>0?'Partially Paid':inv.status;}arPayments.unshift({date:document.getElementById('arMDt').value,client:r.client,ref:r.ref,amt,mode:document.getElementById('arMMod').value,refNo:document.getElementById('arMRef').value});logA('💰',`AR payment — ${r.client} — ${fmt(amt)}`);// Save to Supabase
 if(window.sbSave&&inv)window.sbSave('invoices',{id:inv.id,invoice_number:inv.num,client_name:inv.client,po_ref:inv.poRef||null,date:inv.date||null,due_date:inv.due||null,terms:inv.terms||'',total_amount:inv.amount||0,amount_paid:inv.paid||0,status:inv.status});closeModal('mAR');renderAR();renderARCh();updateBadges();refreshDash();}
-function renderAR(){renderAgingCards(arRecords,'ar','arAging');const flt=document.getElementById('arFlt').value,f=arRecords.filter(r=>!flt||r.status===flt);const tA=arRecords.reduce((a,r)=>a+r.amount,0),tP=arRecords.reduce((a,r)=>a+r.paid,0),tB=arRecords.reduce((a,r)=>a+r.balance,0),tOD=arRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('arK1').textContent=fmt(tA);document.getElementById('arK1t').textContent=arRecords.length+' inv';document.getElementById('arK2').textContent=fmt(tP);document.getElementById('arK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('arK3').textContent=fmt(tB);document.getElementById('arK4').textContent=fmt(tOD);const bkts=getAgingBuckets('ar');document.getElementById('arTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ar');return`<tr><td style="font-weight:600;color:#1d4ed8">${r.ref}</td><td style="font-size:.75rem">${r.invNum||'—'}</td><td>${r.client}</td><td>${r.invDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAR');setTimeout(()=>{document.getElementById('arSel').value=${r.id};fillARM();},60)">Pay</button>`:''}</td></tr>`}).join('');document.getElementById('arFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('arFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('arFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('arPH').innerHTML=arPayments.length?`<div class="pl"><h5>Log</h5>${arPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.client}</span><span class="badge bb">${p.ref}</span><span style="color:#16a34a;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
+function renderAR(){renderAgingCards(arRecords,'ar','arAging');const flt=document.getElementById('arFlt').value,f=arRecords.filter(r=>!flt||r.status===flt);const tA=arRecords.reduce((a,r)=>a+r.amount,0),tP=arRecords.reduce((a,r)=>a+r.paid,0),tB=arRecords.reduce((a,r)=>a+r.balance,0),tOD=arRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('arK1').textContent=fmt(tA);document.getElementById('arK1t').textContent=arRecords.length+' inv';document.getElementById('arK2').textContent=fmt(tP);document.getElementById('arK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('arK3').textContent=fmt(tB);document.getElementById('arK4').textContent=fmt(tOD);const bkts=getAgingBuckets('ar');document.getElementById('arTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ar');return`<tr><td style="font-weight:600;color:#1d4ed8">${r.ref}</td><td style="font-size:.75rem">${r.invNum||'—'}</td><td>${r.client}</td><td>${r.invDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAR');setTimeout(()=>{document.getElementById('arSel').value=${r.id};fillARM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAR(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('arFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('arFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('arFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('arPH').innerHTML=arPayments.length?`<div class="pl"><h5>Log</h5>${arPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.client}</span><span class="badge bb">${p.ref}</span><span style="color:#16a34a;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
 let arCh=[null,null];
 function renderARCh(){const bkts=getAgingBuckets('ar');const b=[0,0,0,0,0];arRecords.filter(r=>r.balance>0).forEach(r=>{const d=dd(today(),r.dueDate);if(d<=0)b[0]+=r.balance;else if(d<=bkts[0])b[1]+=r.balance;else if(d<=bkts[1])b[2]+=r.balance;else if(d<=bkts[2])b[3]+=r.balance;else b[4]+=r.balance;});const labels=['Current',`1-${bkts[0]}d`,`${bkts[0]+1}-${bkts[1]}d`,`${bkts[1]+1}-${bkts[2]}d`,`${bkts[2]}d+`];if(arCh[0])arCh[0].destroy();arCh[0]=new Chart(document.getElementById('cAR1'),{type:'bar',data:{labels,datasets:[{data:b,backgroundColor:['#86efac','#93c5fd','#fcd34d','#fb923c','#f87171'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});const cl=[...new Set(arRecords.map(r=>r.client))],rates=cl.map(c=>{const rx=arRecords.filter(r=>r.client===c),t=rx.reduce((a,r)=>a+r.amount,0),p=rx.reduce((a,r)=>a+r.paid,0);return t>0?Math.round(p/t*100):0;});if(arCh[1])arCh[1].destroy();arCh[1]=new Chart(document.getElementById('cAR2'),{type:'bar',data:{labels:cl.map(c=>c.split(' ')[0]),datasets:[{data:rates,backgroundColor:rates.map(r=>r===100?'#86efac':r>=50?'#93c5fd':'#f87171'),borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{min:0,max:100,ticks:{color:'#64748b',callback:v=>v+'%'},grid:{color:'#f1f5f9'}}}}});}
 
@@ -1320,7 +1356,7 @@ function fillAPM(){const r=apRecords.find(x=>x.id===+document.getElementById('ap
 function saveAPPay(){const sel=+document.getElementById('apSel').value,amt=+document.getElementById('apMAmt').value||0;if(!sel||!amt)return;const r=apRecords.find(x=>x.id===sel);if(!r)return;r.paid+=amt;r.balance=Math.max(0,r.balance-amt);r.status=r.balance===0?'Paid':'Partially Paid';// Update matching SPO paid/balance
 const spo=supplierPOs.find(s=>s.num===r.spoNum);if(spo){spo.paid=(spo.paid||0)+amt;spo.balance=Math.max(0,spo.total-spo.paid);}apPayments.unshift({date:document.getElementById('apMDt').value,supplier:r.supplier,ref:r.ref,amt,mode:document.getElementById('apMMod').value,refNo:document.getElementById('apMRef').value});logA('💳',`AP payment — ${r.supplier} — ${fmt(amt)}`);// Save payment to Supabase
 if(window.sbSave&&spo)window.sbSave('supplier_pos',{id:spo.id,po_number:spo.num,supplier_name:spo.supplier,linked_cpo:spo.linked||null,date:spo.date||null,delivery:spo.delivery||null,terms:spo.terms||'',due_date:spo.due||null,status:spo.status,lines:spo.lines,total_amount:spo.total||0,paid:spo.paid||0,balance:spo.balance||0});closeModal('mAP');renderAP();renderAPCh();window.sbRebuildAR();refreshDash();}
-function renderAP(){renderAgingCards(apRecords,'ap','apAging');const flt=document.getElementById('apFlt').value,f=apRecords.filter(r=>!flt||r.status===flt);const tA=apRecords.reduce((a,r)=>a+r.amount,0),tP=apRecords.reduce((a,r)=>a+r.paid,0),tB=apRecords.reduce((a,r)=>a+r.balance,0),tOD=apRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('apK1').textContent=fmt(tA);document.getElementById('apK1t').textContent=apRecords.length+' bills';document.getElementById('apK2').textContent=fmt(tP);document.getElementById('apK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('apK3').textContent=fmt(tB);document.getElementById('apK4').textContent=fmt(tOD);document.getElementById('apTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ap');return`<tr><td style="font-weight:600;color:#d97706">${r.ref}</td><td style="font-size:.75rem">${r.spoNum||'—'}</td><td>${r.supplier}</td><td>${r.billDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAP');setTimeout(()=>{document.getElementById('apSel').value=${r.id};fillAPM();},60)">Pay</button>`:''}</td></tr>`}).join('');document.getElementById('apFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('apFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('apFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('apPH').innerHTML=apPayments.length?`<div class="pl"><h5>Log</h5>${apPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.supplier}</span><span class="badge ba">${p.ref}</span><span style="color:#d97706;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
+function renderAP(){renderAgingCards(apRecords,'ap','apAging');const flt=document.getElementById('apFlt').value,f=apRecords.filter(r=>!flt||r.status===flt);const tA=apRecords.reduce((a,r)=>a+r.amount,0),tP=apRecords.reduce((a,r)=>a+r.paid,0),tB=apRecords.reduce((a,r)=>a+r.balance,0),tOD=apRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('apK1').textContent=fmt(tA);document.getElementById('apK1t').textContent=apRecords.length+' bills';document.getElementById('apK2').textContent=fmt(tP);document.getElementById('apK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('apK3').textContent=fmt(tB);document.getElementById('apK4').textContent=fmt(tOD);document.getElementById('apTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ap');return`<tr><td style="font-weight:600;color:#d97706">${r.ref}</td><td style="font-size:.75rem">${r.spoNum||'—'}</td><td>${r.supplier}</td><td>${r.billDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAP');setTimeout(()=>{document.getElementById('apSel').value=${r.id};fillAPM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAP(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('apFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('apFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('apFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('apPH').innerHTML=apPayments.length?`<div class="pl"><h5>Log</h5>${apPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.supplier}</span><span class="badge ba">${p.ref}</span><span style="color:#d97706;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
 let apCh=[null,null];
 function renderAPCh(){const bkts=getAgingBuckets('ap');const b=[0,0,0,0,0];apRecords.filter(r=>r.balance>0).forEach(r=>{const d=dd(today(),r.dueDate);if(d<=0)b[0]+=r.balance;else if(d<=bkts[0])b[1]+=r.balance;else if(d<=bkts[1])b[2]+=r.balance;else if(d<=bkts[2])b[3]+=r.balance;else b[4]+=r.balance;});const labels=['Current',`1-${bkts[0]}d`,`${bkts[0]+1}-${bkts[1]}d`,`${bkts[1]+1}-${bkts[2]}d`,`${bkts[2]}d+`];if(apCh[0])apCh[0].destroy();apCh[0]=new Chart(document.getElementById('cAP1'),{type:'bar',data:{labels,datasets:[{data:b,backgroundColor:['#86efac','#93c5fd','#fcd34d','#fb923c','#f87171'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});const sups=[...new Set(apRecords.map(r=>r.supplier))],sb2=sups.map(s=>apRecords.filter(r=>r.supplier===s).reduce((a,r)=>a+r.balance,0));if(apCh[1])apCh[1].destroy();apCh[1]=new Chart(document.getElementById('cAP2'),{type:'doughnut',data:{labels:sups.map(s=>s.split(' ')[0]),datasets:[{data:sb2,backgroundColor:['#3b82f6','#f59e0b','#8b5cf6','#10b981','#ef4444','#ec4899'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#374151',padding:8}}},cutout:'50%'}});}
 
@@ -1734,7 +1770,7 @@ window.sbLoadAll=async function(){
     }catch(e){console.warn('[SB] skip',table,e.message);}
   };
   await loadInto('products',catalog,r=>({id:r.id,code:r.code,desc:r.desc||'',type:r.type||'Product',unit:r.unit||'pcs',group:r.group||'',sp:+r.selling_price||0,pc:+r.unit_cost||0,qtyIn:+r.qty_in||0,qtyOrd:+r.qty_ord||0,qtyAlloc:+r.qty_alloc||0,reorder:+r.reorder||0}));
-  await loadInto('leads',leads,r=>({id:r.id,name:r.name,company:r.company||'',stage:r.stage||'New Lead',value:+r.value||0,owner:r.owner||'',lastContact:r.last_contact||'',nextAction:r.next_action||'',status:r.status||'Active'}));
+  await loadInto('leads',leads,r=>({id:r.id,name:r.name,company:r.company||'',stage:r.stage||'New Lead',value:+r.value||0,owner:r.owner||'',lastContact:r.last_contact||'',nextAction:r.next_action||'',linkedCPO:r.linked_cpo||'',status:r.status||'Active'}));
   await loadInto('client_pos',clientPOs,r=>({id:r.id,num:r.po_number,client:r.client_name,date:r.date||'',status:r.status||'',terms:r.terms||'',prodTotal:+r.prod_total||0,svcTotal:+r.svc_total||0,total:+r.total_amount||0}));
   await loadInto('supplier_pos',supplierPOs,r=>({id:r.id,num:r.po_number,supplier:r.supplier_name,linked:r.linked_cpo||'',date:r.date||'',delivery:r.delivery||'',terms:r.terms||'Full Payment',due:r.due_date||'',status:r.status||'',lines:[{type:'product'}],total:+r.total_amount||0,paid:+r.paid||0,balance:+r.balance||0}));
   await loadInto('invoices',invoices,r=>({id:r.id,num:r.invoice_number,poRef:r.po_ref||'',client:r.client_name,date:r.date||'',due:r.due_date||'',terms:r.terms||'',amount:+r.total_amount||0,paid:+r.amount_paid||0,balance:(+r.total_amount||0)-(+r.amount_paid||0),status:r.status||''}));
@@ -1786,13 +1822,170 @@ window.sbLoadAll=async function(){
 window.closePrintDoc=function(){const w=document.getElementById('printDocWrap');if(w)w.style.display='none';};
 
 // Expose view/edit functions to global scope (required for onclick handlers)
-window.viewCPO=function(id){if(typeof viewCPO==='function'&&viewCPO!==window.viewCPO)return viewCPO(id);const p=clientPOs.find(x=>x.id===id);if(!p)return;window._currentViewId=id;const ls=supplierPOs.filter(sp=>sp.linked===p.num);const jc=ls.reduce((a,sp)=>a+sp.total,0),jgp=p.total-jc;const pct=p.total>0?((jgp/p.total)*100).toFixed(1):0;document.getElementById('vCPOTitle').textContent=p.num+' — '+p.client;document.getElementById('vCPOSub').textContent='Date: '+(p.date||'—')+'  ·  Status: '+p.status+'  ·  Terms: '+(p.terms||'—');document.getElementById('vCPOBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>PO Number</label><input class="fc" value="'+p.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div><div class="fg"><label>Client</label><input class="fc" value="'+p.client+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Status</label><div style="margin-top:6px"><span class="badge '+(sbMap[p.status]||'bgr')+'">'+p.status+'</span></div></div></div><div style="background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"><div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Products</div><div style="font-weight:700;color:#1d4ed8">'+fmt(p.prodTotal)+'</div></div><div style="text-align:center;padding:10px;background:#faf5ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Services</div><div style="font-weight:700;color:#7c3aed">'+fmt(p.svcTotal)+'</div></div><div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Total</div><div style="font-weight:700;color:#1d4ed8">'+fmt(p.total)+'</div></div><div style="text-align:center;padding:10px;background:'+(jgp>=0?'#f0fdf4':'#fef2f2')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Job GP</div><div style="font-weight:700;color:'+(jgp>=0?'#16a34a':'#dc2626')+'">'+fmt(jgp)+' ('+pct+'%)</div></div></div></div>';openModal('mViewCPO');};
+window.viewCPO=function(id){const p=clientPOs.find(x=>x.id===id);if(!p)return;window._currentViewId=id;const ls=supplierPOs.filter(sp=>sp.linked===p.num);const jc=ls.reduce((a,sp)=>a+sp.total,0),jgp=p.total-jc;const pct=p.total>0?((jgp/p.total)*100).toFixed(1):0;
+const linesHtml=p.lines&&p.lines.length?'<div style="margin-top:14px"><div style="font-size:.75rem;font-weight:700;color:#374151;margin-bottom:8px">📦 Line Items</div><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th style="text-align:left;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Description</th><th style="padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Type</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Qty</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Unit Price</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Amount</th></tr></thead><tbody>'+p.lines.map(ln=>'<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+( ln.desc||'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center"><span class="badge '+(ln.type==='product'?'bb':'bp')+'">'+( ln.type==='product'?'Product':'Service')+'</span></td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+(ln.qty||1)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+fmt(ln.price||0)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">'+fmt(ln.amount||0)+'</td></tr>').join('')+'</tbody></table></div>':'<div style="margin-top:14px;color:#94a3b8;font-size:.78rem;text-align:center;padding:12px;background:#f8fafc;border-radius:8px">No line items recorded — edit to add details</div>';
+document.getElementById('vCPOTitle').textContent=p.num+' — '+p.client;document.getElementById('vCPOSub').textContent='Date: '+(p.date||'—')+'  ·  Status: '+p.status+'  ·  Terms: '+(p.terms||'—');document.getElementById('vCPOBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>PO Number</label><input class="fc" value="'+p.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div><div class="fg"><label>Client</label><input class="fc" value="'+p.client+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Status</label><div style="margin-top:6px"><span class="badge '+(sbMap[p.status]||'bgr')+'">'+p.status+'</span></div></div></div><div style="background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"><div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Products</div><div style="font-weight:700;color:#1d4ed8">'+fmt(p.prodTotal)+'</div></div><div style="text-align:center;padding:10px;background:#faf5ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Services</div><div style="font-weight:700;color:#7c3aed">'+fmt(p.svcTotal)+'</div></div><div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Total</div><div style="font-weight:700;color:#1d4ed8">'+fmt(p.total)+'</div></div><div style="text-align:center;padding:10px;background:'+(jgp>=0?'#f0fdf4':'#fef2f2')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Job GP</div><div style="font-weight:700;color:'+(jgp>=0?'#16a34a':'#dc2626')+'">'+fmt(jgp)+' ('+pct+'%)</div></div></div></div>'+linesHtml;openModal('mViewCPO');};
 window.editCPO=function(id){const p=clientPOs.find(x=>x.id===id);if(!p)return;closeModal('mViewCPO');window._cpoEditId=id;initCL();document.getElementById('cN').value=p.num;document.getElementById('cCl').value=p.client;document.getElementById('cDt').value=p.date||'';document.getElementById('cSt').value=p.status;document.getElementById('cTm').value=p.terms||'Full Payment';const cDel=document.getElementById('cDel');if(cDel)cDel.value=p.delivery||'';document.querySelector('#mCPO .mh h3').textContent='Edit CPO — '+p.num;if(p.lines&&p.lines.length){document.getElementById('cLines').innerHTML='';p.lines.forEach(ln=>{addCLine();const i=cLI;if(document.getElementById('cLD'+i))document.getElementById('cLD'+i).value=ln.desc||'';if(document.getElementById('cLT'+i))document.getElementById('cLT'+i).value=ln.type||'product';if(document.getElementById('cLQ'+i))document.getElementById('cLQ'+i).value=ln.qty||1;if(document.getElementById('cLP'+i))document.getElementById('cLP'+i).value=ln.price||0;if(document.getElementById('cLA'+i))document.getElementById('cLA'+i).value=ln.amount||0;});calcCT();}openModal('mCPO');};
-window.viewSPO=function(id){window._currentViewId=id;const s=supplierPOs.find(x=>x.id===id);if(!s)return;document.getElementById('vSPOTitle').textContent=s.num+' — '+s.supplier;document.getElementById('vSPOSub').textContent='Date: '+(s.date||'—')+'  ·  Status: '+s.status;document.getElementById('vSPOBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>PO Number</label><input class="fc" value="'+s.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#d97706"/></div><div class="fg"><label>Supplier</label><input class="fc" value="'+s.supplier+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Status</label><div style="margin-top:6px"><span class="badge '+(sbMap[s.status]||'bgr')+'">'+s.status+'</span></div></div></div><div style="background:#fffbeb;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center"><div style="padding:10px;background:#fff7ed;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Total COGS</div><div style="font-weight:700;color:#d97706">'+fmt(s.total)+'</div></div><div style="padding:10px;background:#f0fdf4;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Paid</div><div style="font-weight:700;color:#16a34a">'+fmt(s.paid)+'</div></div><div style="padding:10px;background:'+(s.balance>0?'#fef2f2':'#f0fdf4')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Balance</div><div style="font-weight:700;color:'+(s.balance>0?'#dc2626':'#16a34a')+'">'+fmt(s.balance)+'</div></div></div></div>';openModal('mViewSPO');};
+window.viewSPO=function(id){window._currentViewId=id;const s=supplierPOs.find(x=>x.id===id);if(!s)return;
+const sLinesHtml=s.lines&&s.lines.length&&(s.lines[0].desc||s.lines[0].amount)?'<div style="margin-top:14px"><div style="font-size:.75rem;font-weight:700;color:#374151;margin-bottom:8px">📦 Line Items (COGS)</div><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th style="text-align:left;padding:6px 10px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e">Description</th><th style="padding:6px 10px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e">Type</th><th style="text-align:right;padding:6px 10px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e">Qty</th><th style="text-align:right;padding:6px 10px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e">Unit Cost</th><th style="text-align:right;padding:6px 10px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e">Amount</th></tr></thead><tbody>'+s.lines.map(ln=>'<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+(ln.desc||'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center"><span class="badge ba">'+(ln.type==='product'?'Product':'Service')+'</span></td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+(ln.qty||1)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+fmt(ln.price||0)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">'+fmt(ln.amount||0)+'</td></tr>').join('')+'</tbody></table></div>':'<div style="margin-top:14px;color:#94a3b8;font-size:.78rem;text-align:center;padding:12px;background:#fffbeb;border-radius:8px">No line items recorded — edit to add details</div>';
+document.getElementById('vSPOTitle').textContent=s.num+' — '+s.supplier;document.getElementById('vSPOSub').textContent='Date: '+(s.date||'—')+'  ·  Linked CPO: '+(s.linked||'None')+'  ·  Status: '+s.status;document.getElementById('vSPOBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>PO Number</label><input class="fc" value="'+s.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#d97706"/></div><div class="fg"><label>Supplier</label><input class="fc" value="'+s.supplier+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Status</label><div style="margin-top:6px"><span class="badge '+(sbMap[s.status]||'bgr')+'">'+s.status+'</span></div></div></div><div style="background:#fffbeb;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center"><div style="padding:10px;background:#fff7ed;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Total COGS</div><div style="font-weight:700;color:#d97706">'+fmt(s.total)+'</div></div><div style="padding:10px;background:#f0fdf4;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Paid</div><div style="font-weight:700;color:#16a34a">'+fmt(s.paid)+'</div></div><div style="padding:10px;background:'+(s.balance>0?'#fef2f2':'#f0fdf4')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Balance</div><div style="font-weight:700;color:'+(s.balance>0?'#dc2626':'#16a34a')+'">'+fmt(s.balance)+'</div></div></div></div>'+sLinesHtml;openModal('mViewSPO');};
 window.editSPO=function(id){const s=supplierPOs.find(x=>x.id===id);if(!s)return;closeModal('mViewSPO');window._spoEditId=id;initSL();document.getElementById('sN').value=s.num;document.getElementById('sSup').value=s.supplier;document.getElementById('sDt').value=s.date||'';const sDel=document.getElementById('sDel');if(sDel)sDel.value=s.delivery||'';document.getElementById('sSt').value=s.status;const sTmEl=document.getElementById('sTm');if(sTmEl)sTmEl.value=s.terms||'Full Payment';const sDueEl=document.getElementById('sDue');if(sDueEl)sDueEl.value=s.due||'';document.querySelector('#mSPO .mh h3').textContent='Edit SPO — '+s.num;if(s.lines&&s.lines.length>0&&(s.lines[0].desc||s.lines[0].amount)){document.getElementById('sLines').innerHTML='';s.lines.forEach(ln=>{addSLine();const i=sLI;if(document.getElementById('sLD'+i))document.getElementById('sLD'+i).value=ln.desc||'';if(document.getElementById('sLT'+i))document.getElementById('sLT'+i).value=ln.type||'product';if(document.getElementById('sLQ'+i))document.getElementById('sLQ'+i).value=ln.qty||1;if(document.getElementById('sLC'+i))document.getElementById('sLC'+i).value=ln.price||0;if(document.getElementById('sLA'+i))document.getElementById('sLA'+i).value=ln.amount||0;});calcST();}openModal('mSPO');setTimeout(()=>{document.getElementById('sLnk').value=s.linked||'';showJobCostPreview();},50);};
 window.viewInv=function(id){window._currentViewId=id;const inv=invoices.find(x=>x.id===id);if(!inv)return;document.getElementById('vInvTitle').textContent=inv.num+' — '+inv.client;document.getElementById('vInvSub').textContent='Date: '+(inv.date||'—')+'  ·  Due: '+(inv.due||'—')+'  ·  '+inv.status;document.getElementById('vInvBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>Invoice #</label><input class="fc" value="'+inv.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div><div class="fg"><label>Client</label><input class="fc" value="'+inv.client+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>PO Ref</label><input class="fc" value="'+(inv.poRef||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Date</label><input class="fc" value="'+(inv.date||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Due</label><input class="fc" value="'+(inv.due||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Terms</label><input class="fc" value="'+(inv.terms||'—')+'" readonly style="background:#f1f5f9"/></div></div><div style="background:#f0fdf4;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center"><div style="padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Amount</div><div style="font-weight:700;color:#1d4ed8">'+fmt(inv.amount)+'</div></div><div style="padding:10px;background:#f0fdf4;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Paid</div><div style="font-weight:700;color:#16a34a">'+fmt(inv.paid)+'</div></div><div style="padding:10px;background:'+(inv.balance>0?'#fef2f2':'#f0fdf4')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Balance</div><div style="font-weight:700;color:'+(inv.balance>0?'#dc2626':'#16a34a')+'">'+fmt(inv.balance)+'</div></div></div></div><div style="text-align:center"><span class="badge '+(sbMap[inv.status]||'bgr')+'" style="font-size:.82rem;padding:6px 20px">'+inv.status+'</span></div>';openModal('mViewInv');};
 window.editInv=function(id){const inv=invoices.find(x=>x.id===id);if(!inv)return;closeModal('mViewInv');window._invEditId=id;document.getElementById('iN').value=inv.num;document.getElementById('iCl').value=inv.client;document.getElementById('iDt').value=inv.date||'';document.getElementById('iDue').value=inv.due||'';document.getElementById('iTerms').value=inv.terms||'Full Payment';document.getElementById('iAmt').value=inv.amount;document.getElementById('iPd').value=inv.paid;document.getElementById('iBal').value=inv.balance;document.getElementById('iSt').value=inv.status;document.querySelector('#mInv .mh h3').textContent='Edit Invoice — '+inv.num;openModal('mInv');setTimeout(()=>{document.getElementById('iPO').value=inv.poRef||'';},50);};
 window.printInvoiceFromCPO=function(cpoId){const cpo=clientPOs.find(p=>p.id===cpoId);if(!cpo)return;const inv=invoices.find(i=>i.poRef===cpo.num);if(inv){window.printInvoice(inv.id);return;}document.getElementById('printDocContent').innerHTML='<div class="print-doc">Draft Invoice for '+cpo.num+'</div>';openPrintPreview();};
+
+// ── LEAD EDIT & PIPELINE ─────────────────────────────────
+let _leadEditId=null;
+const LEAD_STAGES=['New Lead','Qualified','Proposal','Negotiation','Closed Won','Closed Lost'];
+const LEAD_COLORS={'New Lead':'#94a3b8','Qualified':'#3b82f6','Proposal':'#8b5cf6','Negotiation':'#f59e0b','Closed Won':'#16a34a','Closed Lost':'#ef4444'};
+let leadPipelineChart=null;
+
+function openNewLead(){
+  _leadEditId=null;
+  document.getElementById('mLeadTitle').textContent='New Lead';
+  ['lN','lC','lO','lNA'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lV').value='';
+  document.getElementById('lLC').value='';
+  document.getElementById('lSt').value='New Lead';
+  // Populate CPO dropdown
+  document.getElementById('lCPO').innerHTML='<option value="">— None —</option>'+clientPOs.map(p=>`<option value="${p.num}">${p.num} — ${p.client}</option>`).join('');
+  document.getElementById('lCPO').value='';
+  openModal('mLead');
+}
+
+function editLead(id){
+  const l=leads.find(x=>x.id===id);if(!l)return;
+  _leadEditId=id;
+  document.getElementById('mLeadTitle').textContent='Edit Lead';
+  document.getElementById('lN').value=l.name||'';
+  document.getElementById('lC').value=l.company||'';
+  document.getElementById('lSt').value=l.stage||'New Lead';
+  document.getElementById('lV').value=l.value||'';
+  document.getElementById('lO').value=l.owner||'';
+  document.getElementById('lLC').value=l.lastContact||'';
+  document.getElementById('lNA').value=l.nextAction||'';
+  document.getElementById('lCPO').innerHTML='<option value="">— None —</option>'+clientPOs.map(p=>`<option value="${p.num}">${p.num} — ${p.client}</option>`).join('');
+  document.getElementById('lCPO').value=l.linkedCPO||'';
+  openModal('mLead');
+}
+
+function saveLead(){
+  const n=document.getElementById('lN').value.trim();if(!n)return;
+  const data={name:n,company:document.getElementById('lC').value,stage:document.getElementById('lSt').value,value:+document.getElementById('lV').value||0,owner:document.getElementById('lO').value,lastContact:document.getElementById('lLC').value,nextAction:document.getElementById('lNA').value,linkedCPO:document.getElementById('lCPO').value||'',status:'Active'};
+  if(_leadEditId){
+    const idx=leads.findIndex(x=>x.id===_leadEditId);
+    if(idx>-1){leads[idx]={...leads[idx],...data};if(window.sbSave)window.sbSave('leads',{id:leads[idx].id,name:data.name,company:data.company||'',stage:data.stage,value:data.value||0,owner:data.owner||'',last_contact:data.lastContact||null,next_action:data.nextAction||'',status:'Active'});}
+    _leadEditId=null;
+  } else {
+    const _nl={id:++idL,...data};leads.push(_nl);
+    if(window.sbSave)window.sbSave('leads',{id:_nl.id,name:_nl.name,company:_nl.company||'',stage:_nl.stage,value:_nl.value||0,owner:_nl.owner||'',last_contact:_nl.lastContact||null,next_action:_nl.nextAction||'',status:'Active'});
+    logA('🎯',`Lead: ${n}`);
+  }
+  closeModal('mLead');renderLeads();updateBadges();refreshDash();
+}
+
+function renderLeads(){
+  const s=(document.getElementById('lSrch').value||'').toLowerCase(),st=document.getElementById('lStgF').value;
+  const f=leads.filter(l=>(!s||(l.name+l.company).toLowerCase().includes(s))&&(!st||l.stage===st));
+  document.getElementById('leadsTbl').innerHTML=f.length?f.map(l=>`<tr>
+    <td><div style="font-weight:600">${l.name}</div><div style="font-size:.72rem;color:#94a3b8">${l.company||'—'}</div></td>
+    <td><span class="badge ${sbMap[l.stage]||'bgr'}">${l.stage}</span></td>
+    <td style="font-weight:600">${fmt(l.value)}</td>
+    <td>${l.owner||'—'}</td>
+    <td>${l.lastContact||'—'}</td>
+    <td style="font-size:.75rem;color:#475569">${l.nextAction||'—'}</td>
+    <td>${l.linkedCPO?`<span class="badge bb">${l.linkedCPO}</span>`:'—'}</td>
+    <td><span class="badge ${l.stage==='Closed Won'?'bg':l.stage==='Closed Lost'?'br':'ba'}">${l.stage==='Closed Won'?'Won':l.stage==='Closed Lost'?'Lost':'Active'}</span></td>
+    <td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="editLead(${l.id})">✏️</button><button class="btn btn-danger" onclick="deleteLead(${l.id})">✕</button></td>
+  </tr>`).join(''):`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px">No leads.</td></tr>`;
+  // Pipeline chart
+  const stageTotals=LEAD_STAGES.map(st=>leads.filter(l=>l.stage===st).reduce((a,l)=>a+l.value,0));
+  const stageCounts=LEAD_STAGES.map(st=>leads.filter(l=>l.stage===st).length);
+  // Stage cards
+  document.getElementById('leadStageCards').innerHTML=LEAD_STAGES.map((st,i)=>`<div style="background:#f8fafc;border-radius:8px;padding:10px;border-left:3px solid ${LEAD_COLORS[st]}">
+    <div style="font-size:.65rem;font-weight:700;color:#64748b;text-transform:uppercase">${st}</div>
+    <div style="font-size:1.1rem;font-weight:700;color:${LEAD_COLORS[st]};margin:4px 0">${stageCounts[i]}</div>
+    <div style="font-size:.72rem;color:#94a3b8">${fmt(stageTotals[i])}</div>
+  </div>`).join('');
+  // Pipeline bar chart
+  const canv=document.getElementById('cLeadPipeline');if(!canv)return;
+  if(leadPipelineChart)leadPipelineChart.destroy();
+  leadPipelineChart=new Chart(canv,{type:'bar',data:{labels:LEAD_STAGES,datasets:[{data:stageTotals,backgroundColor:LEAD_STAGES.map(s=>LEAD_COLORS[s]),borderRadius:5}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+}
+
+// ── AR EDIT ────────────────────────────────────────────────
+let _arEditId=null;
+function openEditAR(id){
+  const r=arRecords.find(x=>x.id===id);if(!r)return;
+  _arEditId=id;
+  document.getElementById('arEditRef').value=r.ref||'';
+  document.getElementById('arEditInv').value=r.invNum||'';
+  document.getElementById('arEditClient').value=r.client||'';
+  document.getElementById('arEditInvDate').value=r.invDate||'';
+  document.getElementById('arEditDue').value=r.dueDate||'';
+  document.getElementById('arEditStatus').value=r.status||'Outstanding';
+  document.getElementById('arEditAmt').value=r.amount||0;
+  document.getElementById('arEditPaid').value=r.paid||0;
+  document.getElementById('arEditBal').value=(r.amount-r.paid).toFixed(2);
+  openModal('mEditAR');
+}
+function arEditCalcBal(){
+  const a=+document.getElementById('arEditAmt').value||0,p=+document.getElementById('arEditPaid').value||0;
+  document.getElementById('arEditBal').value=Math.max(0,a-p).toFixed(2);
+}
+function saveAREdit(){
+  const r=arRecords.find(x=>x.id===_arEditId);if(!r)return;
+  const amt=+document.getElementById('arEditAmt').value||0;
+  const paid=+document.getElementById('arEditPaid').value||0;
+  r.invDate=document.getElementById('arEditInvDate').value;
+  r.dueDate=document.getElementById('arEditDue').value;
+  r.amount=amt;r.paid=paid;r.balance=Math.max(0,amt-paid);
+  r.status=document.getElementById('arEditStatus').value||( r.balance===0?'Paid':paid>0?'Partially Paid':'Outstanding');
+  // Sync to matching invoice
+  const inv=invoices.find(i=>i.num===r.invNum);
+  if(inv){inv.paid=paid;inv.balance=r.balance;inv.status=r.status;inv.date=r.invDate;inv.due=r.dueDate;
+    if(window.sbSave)window.sbSave('invoices',{id:inv.id,invoice_number:inv.num,client_name:inv.client,po_ref:inv.poRef||null,date:inv.date||null,due_date:inv.due||null,terms:inv.terms||'',total_amount:inv.amount||0,amount_paid:inv.paid||0,status:inv.status});
+  }
+  _arEditId=null;closeModal('mEditAR');renderAR();renderARCh();renderInv();refreshDash();
+  window.sbToast('✅ AR record updated','#16a34a');
+}
+
+// ── AP EDIT ────────────────────────────────────────────────
+let _apEditId=null;
+function openEditAP(id){
+  const r=apRecords.find(x=>x.id===id);if(!r)return;
+  _apEditId=id;
+  document.getElementById('apEditRef').value=r.ref||'';
+  document.getElementById('apEditSpo').value=r.spoNum||'';
+  document.getElementById('apEditSupplier').value=r.supplier||'';
+  document.getElementById('apEditBillDate').value=r.billDate||'';
+  document.getElementById('apEditDue').value=r.dueDate||'';
+  document.getElementById('apEditStatus').value=r.status||'Outstanding';
+  document.getElementById('apEditAmt').value=r.amount||0;
+  document.getElementById('apEditPaid').value=r.paid||0;
+  document.getElementById('apEditBal').value=(r.amount-r.paid).toFixed(2);
+  openModal('mEditAP');
+}
+function apEditCalcBal(){
+  const a=+document.getElementById('apEditAmt').value||0,p=+document.getElementById('apEditPaid').value||0;
+  document.getElementById('apEditBal').value=Math.max(0,a-p).toFixed(2);
+}
+function saveAPEdit(){
+  const r=apRecords.find(x=>x.id===_apEditId);if(!r)return;
+  const amt=+document.getElementById('apEditAmt').value||0;
+  const paid=+document.getElementById('apEditPaid').value||0;
+  r.billDate=document.getElementById('apEditBillDate').value;
+  r.dueDate=document.getElementById('apEditDue').value;
+  r.amount=amt;r.paid=paid;r.balance=Math.max(0,amt-paid);
+  r.status=document.getElementById('apEditStatus').value||(r.balance===0?'Paid':paid>0?'Partially Paid':'Outstanding');
+  // Sync to matching SPO
+  const spo=supplierPOs.find(s=>s.num===r.spoNum);
+  if(spo){spo.paid=paid;spo.balance=r.balance;
+    if(window.sbSave)window.sbSave('supplier_pos',{id:spo.id,po_number:spo.num,supplier_name:spo.supplier,linked_cpo:spo.linked||null,date:spo.date||null,delivery:spo.delivery||null,terms:spo.terms||'',due_date:spo.due||null,status:spo.status,lines:spo.lines,total_amount:spo.total||0,paid:spo.paid||0,balance:spo.balance||0});
+  }
+  _apEditId=null;closeModal('mEditAP');renderAP();renderAPCh();refreshDash();
+  window.sbToast('✅ AP record updated','#16a34a');
+}
 
 // Boot: load from Supabase on startup
 window.sbLoadAll();
