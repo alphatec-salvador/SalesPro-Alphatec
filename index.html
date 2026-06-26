@@ -533,9 +533,10 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   </div>
   <div class="aging-row" id="arAging"></div>
   <div class="cr2"><div class="cb"><h4>AR Aging by Amount</h4><canvas id="cAR1" height="200"></canvas></div><div class="cb"><h4>Collection Rate by Client</h4><canvas id="cAR2" height="200"></canvas></div></div>
-  <div class="card"><div class="card-header"><div><h3>AR Ledger</h3></div><select class="fc" style="width:160px;font-size:.75rem" id="arFlt" onchange="renderAR()"><option value="">All Status</option><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div>
+  <div class="card"><div class="card-header"><div><h3>AR Ledger</h3></div><div style="display:flex;gap:8px;align-items:center"><div id="arMonthTabs" style="display:flex;gap:3px;background:#f1f5f9;padding:3px;border-radius:9px;flex-wrap:wrap"></div><select class="fc" style="width:160px;font-size:.75rem" id="arFlt" onchange="renderAR()"><option value="">All Status</option><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div></div>
   <div class="tbl-wrap"><table><thead><tr><th>AR Ref</th><th>Invoice</th><th>Client</th><th>Inv Date</th><th>Due</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Days O/D</th><th>Aging</th><th>Status</th><th></th></tr></thead><tbody id="arTbl"></tbody>
   <tfoot><tr><td colspan="5">TOTAL</td><td id="arFA">₱0</td><td id="arFP">₱0</td><td id="arFB">₱0</td><td colspan="4"></td></tr></tfoot></table></div></div>
+  <div class="card" style="margin-top:12px"><div class="card-header"><h3>Monthly AR Summary</h3></div><div class="card-body" style="overflow-x:auto"><div id="arMonthlySummary"></div></div></div>
   <div class="card"><div class="card-header"><h3>Payment History</h3></div><div class="card-body"><div id="arPH"></div></div></div>
 </div>
 
@@ -550,9 +551,10 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   </div>
   <div class="aging-row" id="apAging"></div>
   <div class="cr2"><div class="cb"><h4>AP Aging by Amount</h4><canvas id="cAP1" height="200"></canvas></div><div class="cb"><h4>Outstanding by Supplier</h4><canvas id="cAP2" height="200"></canvas></div></div>
-  <div class="card"><div class="card-header"><div><h3>AP Ledger</h3></div><select class="fc" style="width:160px;font-size:.75rem" id="apFlt" onchange="renderAP()"><option value="">All Status</option><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div>
+  <div class="card"><div class="card-header"><div><h3>AP Ledger</h3></div><div style="display:flex;gap:8px;align-items:center"><div id="apMonthTabs" style="display:flex;gap:3px;background:#f1f5f9;padding:3px;border-radius:9px;flex-wrap:wrap"></div><select class="fc" style="width:160px;font-size:.75rem" id="apFlt" onchange="renderAP()"><option value="">All Status</option><option>Outstanding</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div></div>
   <div class="tbl-wrap"><table><thead><tr><th>AP Ref</th><th>SPO</th><th>Supplier</th><th>Bill Date</th><th>Due</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Days O/D</th><th>Aging</th><th>Status</th><th></th></tr></thead><tbody id="apTbl"></tbody>
   <tfoot><tr><td colspan="5">TOTAL</td><td id="apFA">₱0</td><td id="apFP">₱0</td><td id="apFB">₱0</td><td colspan="4"></td></tr></tfoot></table></div></div>
+  <div class="card" style="margin-top:12px"><div class="card-header"><h3>Monthly AP Summary</h3></div><div class="card-body" style="overflow-x:auto"><div id="apMonthlySummary"></div></div></div>
   <div class="card"><div class="card-header"><h3>Payment History</h3></div><div class="card-body"><div id="apPH"></div></div></div>
 </div>
 
@@ -1346,7 +1348,115 @@ function fillARM(){const r=arRecords.find(x=>x.id===+document.getElementById('ar
 function saveARPay(){const sel=+document.getElementById('arSel').value,amt=+document.getElementById('arMAmt').value||0;if(!sel||!amt)return;const r=arRecords.find(x=>x.id===sel);if(!r)return;r.paid+=amt;r.balance=Math.max(0,r.balance-amt);r.status=r.balance===0?'Paid':'Partially Paid';// Update matching invoice paid/balance
 const inv=invoices.find(i=>i.num===r.invNum);if(inv){inv.paid=(inv.paid||0)+amt;inv.balance=Math.max(0,inv.amount-inv.paid);inv.status=inv.balance===0?'Paid':inv.paid>0?'Partially Paid':inv.status;}arPayments.unshift({date:document.getElementById('arMDt').value,client:r.client,ref:r.ref,amt,mode:document.getElementById('arMMod').value,refNo:document.getElementById('arMRef').value});logA('💰',`AR payment — ${r.client} — ${fmt(amt)}`);// Save to Supabase
 if(window.sbSave&&inv)window.sbSave('invoices',{id:inv.id,invoice_number:inv.num,client_name:inv.client,po_ref:inv.poRef||null,date:inv.date||null,due_date:inv.due||null,terms:inv.terms||'',total_amount:inv.amount||0,amount_paid:inv.paid||0,status:inv.status});closeModal('mAR');renderAR();renderARCh();updateBadges();refreshDash();}
-function renderAR(){renderAgingCards(arRecords,'ar','arAging');const flt=document.getElementById('arFlt').value,f=arRecords.filter(r=>!flt||r.status===flt);const tA=arRecords.reduce((a,r)=>a+r.amount,0),tP=arRecords.reduce((a,r)=>a+r.paid,0),tB=arRecords.reduce((a,r)=>a+r.balance,0),tOD=arRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('arK1').textContent=fmt(tA);document.getElementById('arK1t').textContent=arRecords.length+' inv';document.getElementById('arK2').textContent=fmt(tP);document.getElementById('arK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('arK3').textContent=fmt(tB);document.getElementById('arK4').textContent=fmt(tOD);const bkts=getAgingBuckets('ar');document.getElementById('arTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ar');return`<tr><td style="font-weight:600;color:#1d4ed8">${r.ref}</td><td style="font-size:.75rem">${r.invNum||'—'}</td><td>${r.client}</td><td>${r.invDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAR');setTimeout(()=>{document.getElementById('arSel').value=${r.id};fillARM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAR(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('arFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('arFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('arFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('arPH').innerHTML=arPayments.length?`<div class="pl"><h5>Log</h5>${arPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.client}</span><span class="badge bb">${p.ref}</span><span style="color:#16a34a;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
+// ── AR/AP MONTHLY FILTER ──────────────────────────────────
+let selARMonth='All', selAPMonth='All';
+const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function buildARMonthTabs(){
+  // Get months that have AR records
+  const months=['All',...new Set(arRecords.map(r=>(r.invDate||'').slice(0,7)).filter(Boolean).sort())];
+  const el=document.getElementById('arMonthTabs');if(!el)return;
+  el.innerHTML=months.map(m=>{
+    const label=m==='All'?'All':MONTHS_SHORT[+m.split('-')[1]-1]+' '+m.split('-')[0];
+    return`<button style="padding:4px 10px;border:none;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;background:${selARMonth===m?'#fff':'transparent'};color:${selARMonth===m?'#1d4ed8':'#64748b'};box-shadow:${selARMonth===m?'0 1px 3px rgba(0,0,0,.1)':''}" onclick="selARMonth='${m}';buildARMonthTabs();renderAR()">${label}</button>`;
+  }).join('');
+}
+
+function buildAPMonthTabs(){
+  const months=['All',...new Set(apRecords.map(r=>(r.billDate||'').slice(0,7)).filter(Boolean).sort())];
+  const el=document.getElementById('apMonthTabs');if(!el)return;
+  el.innerHTML=months.map(m=>{
+    const label=m==='All'?'All':MONTHS_SHORT[+m.split('-')[1]-1]+' '+m.split('-')[0];
+    return`<button style="padding:4px 10px;border:none;border-radius:7px;font-size:.72rem;font-weight:600;cursor:pointer;background:${selAPMonth===m?'#fff':'transparent'};color:${selAPMonth===m?'#d97706':'#64748b'};box-shadow:${selAPMonth===m?'0 1px 3px rgba(0,0,0,.1)':''}" onclick="selAPMonth='${m}';buildAPMonthTabs();renderAP()">${label}</button>`;
+  }).join('');
+}
+
+function renderARMonthlySummary(){
+  const el=document.getElementById('arMonthlySummary');if(!el)return;
+  // Group all AR records by invoice month
+  const byMonth={};
+  arRecords.forEach(r=>{
+    const m=(r.invDate||'').slice(0,7);if(!m)return;
+    if(!byMonth[m])byMonth[m]={month:m,invoiced:0,paid:0,outstanding:0,count:0};
+    byMonth[m].invoiced+=r.amount;byMonth[m].paid+=r.paid;byMonth[m].outstanding+=r.balance;byMonth[m].count++;
+  });
+  const sorted=Object.values(byMonth).sort((a,b)=>a.month.localeCompare(b.month));
+  if(!sorted.length){el.innerHTML='<p style="color:#94a3b8;font-size:.8rem;text-align:center;padding:12px">No AR data yet.</p>';return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:.8rem">
+    <thead><tr>
+      <th style="text-align:left;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase">Month</th>
+      <th style="text-align:right;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase"># Invoices</th>
+      <th style="text-align:right;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase">Invoiced</th>
+      <th style="text-align:right;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase">Collected</th>
+      <th style="text-align:right;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase">Outstanding</th>
+      <th style="text-align:right;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b;font-size:.68rem;text-transform:uppercase">Collection %</th>
+    </tr></thead>
+    <tbody>${sorted.map(r=>{
+      const pct=r.invoiced>0?((r.paid/r.invoiced)*100).toFixed(0):0;
+      const mLabel=MONTHS_SHORT[+r.month.split('-')[1]-1]+' '+r.month.split('-')[0];
+      return`<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:8px 12px;font-weight:600">${mLabel}</td>
+        <td style="padding:8px 12px;text-align:right;color:#64748b">${r.count}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:600">${fmt(r.invoiced)}</td>
+        <td style="padding:8px 12px;text-align:right;color:#16a34a;font-weight:600">${fmt(r.paid)}</td>
+        <td style="padding:8px 12px;text-align:right;color:${r.outstanding>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.outstanding)}</td>
+        <td style="padding:8px 12px;text-align:right"><span style="background:${+pct===100?'#dcfce7':+pct>=50?'#eff6ff':'#fef2f2'};color:${+pct===100?'#16a34a':+pct>=50?'#1d4ed8':'#dc2626'};padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700">${pct}%</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr style="background:#f8fafc;font-weight:700">
+      <td style="padding:8px 12px">TOTAL</td>
+      <td style="padding:8px 12px;text-align:right">${sorted.reduce((a,r)=>a+r.count,0)}</td>
+      <td style="padding:8px 12px;text-align:right">${fmt(sorted.reduce((a,r)=>a+r.invoiced,0))}</td>
+      <td style="padding:8px 12px;text-align:right;color:#16a34a">${fmt(sorted.reduce((a,r)=>a+r.paid,0))}</td>
+      <td style="padding:8px 12px;text-align:right;color:#dc2626">${fmt(sorted.reduce((a,r)=>a+r.outstanding,0))}</td>
+      <td style="padding:8px 12px;text-align:right">${sorted.reduce((a,r)=>a+r.invoiced,0)>0?(sorted.reduce((a,r)=>a+r.paid,0)/sorted.reduce((a,r)=>a+r.invoiced,0)*100).toFixed(0)+'%':'0%'}</td>
+    </tr></tfoot>
+  </table>`;
+}
+
+function renderAPMonthlySummary(){
+  const el=document.getElementById('apMonthlySummary');if(!el)return;
+  const byMonth={};
+  apRecords.forEach(r=>{
+    const m=(r.billDate||'').slice(0,7);if(!m)return;
+    if(!byMonth[m])byMonth[m]={month:m,billed:0,paid:0,outstanding:0,count:0};
+    byMonth[m].billed+=r.amount;byMonth[m].paid+=r.paid;byMonth[m].outstanding+=r.balance;byMonth[m].count++;
+  });
+  const sorted=Object.values(byMonth).sort((a,b)=>a.month.localeCompare(b.month));
+  if(!sorted.length){el.innerHTML='<p style="color:#94a3b8;font-size:.8rem;text-align:center;padding:12px">No AP data yet.</p>';return;}
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:.8rem">
+    <thead><tr>
+      <th style="text-align:left;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase">Month</th>
+      <th style="text-align:right;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase"># Bills</th>
+      <th style="text-align:right;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase">Billed</th>
+      <th style="text-align:right;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase">Paid</th>
+      <th style="text-align:right;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase">Outstanding</th>
+      <th style="text-align:right;padding:8px 12px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#92400e;font-size:.68rem;text-transform:uppercase">Paid %</th>
+    </tr></thead>
+    <tbody>${sorted.map(r=>{
+      const pct=r.billed>0?((r.paid/r.billed)*100).toFixed(0):0;
+      const mLabel=MONTHS_SHORT[+r.month.split('-')[1]-1]+' '+r.month.split('-')[0];
+      return`<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:8px 12px;font-weight:600">${mLabel}</td>
+        <td style="padding:8px 12px;text-align:right;color:#64748b">${r.count}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:600">${fmt(r.billed)}</td>
+        <td style="padding:8px 12px;text-align:right;color:#16a34a;font-weight:600">${fmt(r.paid)}</td>
+        <td style="padding:8px 12px;text-align:right;color:${r.outstanding>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.outstanding)}</td>
+        <td style="padding:8px 12px;text-align:right"><span style="background:${+pct===100?'#dcfce7':+pct>=50?'#fffbeb':'#fef2f2'};color:${+pct===100?'#16a34a':+pct>=50?'#d97706':'#dc2626'};padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700">${pct}%</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr style="background:#fffbeb;font-weight:700">
+      <td style="padding:8px 12px">TOTAL</td>
+      <td style="padding:8px 12px;text-align:right">${sorted.reduce((a,r)=>a+r.count,0)}</td>
+      <td style="padding:8px 12px;text-align:right">${fmt(sorted.reduce((a,r)=>a+r.billed,0))}</td>
+      <td style="padding:8px 12px;text-align:right;color:#16a34a">${fmt(sorted.reduce((a,r)=>a+r.paid,0))}</td>
+      <td style="padding:8px 12px;text-align:right;color:#dc2626">${fmt(sorted.reduce((a,r)=>a+r.outstanding,0))}</td>
+      <td style="padding:8px 12px;text-align:right">${sorted.reduce((a,r)=>a+r.billed,0)>0?(sorted.reduce((a,r)=>a+r.paid,0)/sorted.reduce((a,r)=>a+r.billed,0)*100).toFixed(0)+'%':'0%'}</td>
+    </tr></tfoot>
+  </table>`;
+}
+
+function renderAR(){buildARMonthTabs();renderAgingCards(arRecords,'ar','arAging');const flt=document.getElementById('arFlt').value;const f=arRecords.filter(r=>(!flt||r.status===flt)&&(selARMonth==='All'||(r.invDate||'').startsWith(selARMonth)));const tA=arRecords.reduce((a,r)=>a+r.amount,0),tP=arRecords.reduce((a,r)=>a+r.paid,0),tB=arRecords.reduce((a,r)=>a+r.balance,0),tOD=arRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('arK1').textContent=fmt(tA);document.getElementById('arK1t').textContent=arRecords.length+' inv';document.getElementById('arK2').textContent=fmt(tP);document.getElementById('arK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('arK3').textContent=fmt(tB);document.getElementById('arK4').textContent=fmt(tOD);const bkts=getAgingBuckets('ar');document.getElementById('arTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ar');return`<tr><td style="font-weight:600;color:#1d4ed8">${r.ref}</td><td style="font-size:.75rem">${r.invNum||'—'}</td><td>${r.client}</td><td>${r.invDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAR');setTimeout(()=>{document.getElementById('arSel').value=${r.id};fillARM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAR(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('arFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('arFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('arFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('arPH').innerHTML=arPayments.length?`<div class="pl"><h5>Log</h5>${arPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.client}</span><span class="badge bb">${p.ref}</span><span style="color:#16a34a;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';renderARMonthlySummary();}
 let arCh=[null,null];
 function renderARCh(){const bkts=getAgingBuckets('ar');const b=[0,0,0,0,0];arRecords.filter(r=>r.balance>0).forEach(r=>{const d=dd(today(),r.dueDate);if(d<=0)b[0]+=r.balance;else if(d<=bkts[0])b[1]+=r.balance;else if(d<=bkts[1])b[2]+=r.balance;else if(d<=bkts[2])b[3]+=r.balance;else b[4]+=r.balance;});const labels=['Current',`1-${bkts[0]}d`,`${bkts[0]+1}-${bkts[1]}d`,`${bkts[1]+1}-${bkts[2]}d`,`${bkts[2]}d+`];if(arCh[0])arCh[0].destroy();arCh[0]=new Chart(document.getElementById('cAR1'),{type:'bar',data:{labels,datasets:[{data:b,backgroundColor:['#86efac','#93c5fd','#fcd34d','#fb923c','#f87171'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});const cl=[...new Set(arRecords.map(r=>r.client))],rates=cl.map(c=>{const rx=arRecords.filter(r=>r.client===c),t=rx.reduce((a,r)=>a+r.amount,0),p=rx.reduce((a,r)=>a+r.paid,0);return t>0?Math.round(p/t*100):0;});if(arCh[1])arCh[1].destroy();arCh[1]=new Chart(document.getElementById('cAR2'),{type:'bar',data:{labels:cl.map(c=>c.split(' ')[0]),datasets:[{data:rates,backgroundColor:rates.map(r=>r===100?'#86efac':r>=50?'#93c5fd':'#f87171'),borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{min:0,max:100,ticks:{color:'#64748b',callback:v=>v+'%'},grid:{color:'#f1f5f9'}}}}});}
 
@@ -1356,7 +1466,7 @@ function fillAPM(){const r=apRecords.find(x=>x.id===+document.getElementById('ap
 function saveAPPay(){const sel=+document.getElementById('apSel').value,amt=+document.getElementById('apMAmt').value||0;if(!sel||!amt)return;const r=apRecords.find(x=>x.id===sel);if(!r)return;r.paid+=amt;r.balance=Math.max(0,r.balance-amt);r.status=r.balance===0?'Paid':'Partially Paid';// Update matching SPO paid/balance
 const spo=supplierPOs.find(s=>s.num===r.spoNum);if(spo){spo.paid=(spo.paid||0)+amt;spo.balance=Math.max(0,spo.total-spo.paid);}apPayments.unshift({date:document.getElementById('apMDt').value,supplier:r.supplier,ref:r.ref,amt,mode:document.getElementById('apMMod').value,refNo:document.getElementById('apMRef').value});logA('💳',`AP payment — ${r.supplier} — ${fmt(amt)}`);// Save payment to Supabase
 if(window.sbSave&&spo)window.sbSave('supplier_pos',{id:spo.id,po_number:spo.num,supplier_name:spo.supplier,linked_cpo:spo.linked||null,date:spo.date||null,delivery:spo.delivery||null,terms:spo.terms||'',due_date:spo.due||null,status:spo.status,lines:spo.lines,total_amount:spo.total||0,paid:spo.paid||0,balance:spo.balance||0});closeModal('mAP');renderAP();renderAPCh();window.sbRebuildAR();refreshDash();}
-function renderAP(){renderAgingCards(apRecords,'ap','apAging');const flt=document.getElementById('apFlt').value,f=apRecords.filter(r=>!flt||r.status===flt);const tA=apRecords.reduce((a,r)=>a+r.amount,0),tP=apRecords.reduce((a,r)=>a+r.paid,0),tB=apRecords.reduce((a,r)=>a+r.balance,0),tOD=apRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('apK1').textContent=fmt(tA);document.getElementById('apK1t').textContent=apRecords.length+' bills';document.getElementById('apK2').textContent=fmt(tP);document.getElementById('apK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('apK3').textContent=fmt(tB);document.getElementById('apK4').textContent=fmt(tOD);document.getElementById('apTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ap');return`<tr><td style="font-weight:600;color:#d97706">${r.ref}</td><td style="font-size:.75rem">${r.spoNum||'—'}</td><td>${r.supplier}</td><td>${r.billDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAP');setTimeout(()=>{document.getElementById('apSel').value=${r.id};fillAPM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAP(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('apFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('apFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('apFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('apPH').innerHTML=apPayments.length?`<div class="pl"><h5>Log</h5>${apPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.supplier}</span><span class="badge ba">${p.ref}</span><span style="color:#d97706;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';}
+function renderAP(){buildAPMonthTabs();renderAgingCards(apRecords,'ap','apAging');const flt=document.getElementById('apFlt').value;const f=apRecords.filter(r=>(!flt||r.status===flt)&&(selAPMonth==='All'||(r.billDate||'').startsWith(selAPMonth)));const tA=apRecords.reduce((a,r)=>a+r.amount,0),tP=apRecords.reduce((a,r)=>a+r.paid,0),tB=apRecords.reduce((a,r)=>a+r.balance,0),tOD=apRecords.filter(r=>r.status==='Overdue').reduce((a,r)=>a+r.balance,0);document.getElementById('apK1').textContent=fmt(tA);document.getElementById('apK1t').textContent=apRecords.length+' bills';document.getElementById('apK2').textContent=fmt(tP);document.getElementById('apK2t').textContent=tA>0?((tP/tA)*100).toFixed(0)+'%':'0%';document.getElementById('apK3').textContent=fmt(tB);document.getElementById('apK4').textContent=fmt(tOD);document.getElementById('apTbl').innerHTML=f.map(r=>{const dO=dd(today(),r.dueDate),ag=aging(r,'ap');return`<tr><td style="font-weight:600;color:#d97706">${r.ref}</td><td style="font-size:.75rem">${r.spoNum||'—'}</td><td>${r.supplier}</td><td>${r.billDate||'—'}</td><td>${r.dueDate||'—'}</td><td style="font-weight:600">${fmt(r.amount)}</td><td style="color:#16a34a">${fmt(r.paid)}</td><td style="color:${r.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(r.balance)}</td><td style="font-size:.75rem">${r.balance>0&&dO>0?dO+'d':'—'}</td><td><span class="badge ${agingBadgeClass(ag)}">${ag.l}</span></td><td><span class="badge ${sbMap[r.status]||'bgr'}">${r.status}</span></td><td>${r.balance>0?`<button class="btn btn-success btn-sm" onclick="openModal('mAP');setTimeout(()=>{document.getElementById('apSel').value=${r.id};fillAPM();},60)">💰 Pay</button>`:''} <button class="btn btn-ghost btn-sm" onclick="openEditAP(${r.id})">✏️</button></td></tr>`}).join('');document.getElementById('apFA').textContent=fmt(f.reduce((a,r)=>a+r.amount,0));document.getElementById('apFP').textContent=fmt(f.reduce((a,r)=>a+r.paid,0));document.getElementById('apFB').textContent=fmt(f.reduce((a,r)=>a+r.balance,0));document.getElementById('apPH').innerHTML=apPayments.length?`<div class="pl"><h5>Log</h5>${apPayments.map(p=>`<div class="pr"><span style="color:#94a3b8">${p.date}</span><span style="font-weight:600">${p.supplier}</span><span class="badge ba">${p.ref}</span><span style="color:#d97706;font-weight:700">${fmt(p.amt)}</span><span style="font-size:.72rem;color:#64748b">${p.mode}·${p.refNo}</span></div>`).join('')}</div>`:'<p style="color:#94a3b8;font-size:.8rem">No payments yet.</p>';renderAPMonthlySummary();}
 let apCh=[null,null];
 function renderAPCh(){const bkts=getAgingBuckets('ap');const b=[0,0,0,0,0];apRecords.filter(r=>r.balance>0).forEach(r=>{const d=dd(today(),r.dueDate);if(d<=0)b[0]+=r.balance;else if(d<=bkts[0])b[1]+=r.balance;else if(d<=bkts[1])b[2]+=r.balance;else if(d<=bkts[2])b[3]+=r.balance;else b[4]+=r.balance;});const labels=['Current',`1-${bkts[0]}d`,`${bkts[0]+1}-${bkts[1]}d`,`${bkts[1]+1}-${bkts[2]}d`,`${bkts[2]}d+`];if(apCh[0])apCh[0].destroy();apCh[0]=new Chart(document.getElementById('cAP1'),{type:'bar',data:{labels,datasets:[{data:b,backgroundColor:['#86efac','#93c5fd','#fcd34d','#fb923c','#f87171'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});const sups=[...new Set(apRecords.map(r=>r.supplier))],sb2=sups.map(s=>apRecords.filter(r=>r.supplier===s).reduce((a,r)=>a+r.balance,0));if(apCh[1])apCh[1].destroy();apCh[1]=new Chart(document.getElementById('cAP2'),{type:'doughnut',data:{labels:sups.map(s=>s.split(' ')[0]),datasets:[{data:sb2,backgroundColor:['#3b82f6','#f59e0b','#8b5cf6','#10b981','#ef4444','#ec4899'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#374151',padding:8}}},cutout:'50%'}});}
 
