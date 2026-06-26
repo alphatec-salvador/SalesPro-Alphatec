@@ -372,6 +372,97 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
     </div>
   </div>
 
+
+  <!-- Sales Category KPI Section -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:4px">
+    <span style="font-size:14px">🏷️</span>
+    <span style="font-size:.7rem;font-weight:600;color:#64748b;white-space:nowrap">Sales by Category</span>
+    <div style="flex:1;height:0.5px;background:#e2e8f0"></div>
+  </div>
+  <div class="kpi-row" style="margin-bottom:12px">
+    <div class="kpi" style="border-left:3px solid #1d4ed8;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-b" style="font-size:14px">📦</div><span class="kt kt-n" id="dkt_ps" style="font-size:.68rem">products</span></div>
+      <label>Product Sales</label><div class="val" id="dk_prod">₱0</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div id="spark_prod" style="display:flex;align-items:flex-end;gap:1px;height:16px"></div><span class="sub" id="dk_prod_pct">0% of revenue</span></div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #7c3aed;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-p" style="font-size:14px">🔧</div><span class="kt kt-n" id="dkt_ss" style="font-size:.68rem">services</span></div>
+      <label>Service Revenue</label><div class="val" id="dk_svc">₱0</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div id="spark_svc" style="display:flex;align-items:flex-end;gap:1px;height:16px"></div><span class="sub" id="dk_svc_pct">0% of revenue</span></div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #0d9488;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-t" style="font-size:14px">📈</div><span class="kt kt-n" id="dkt_gm" style="font-size:.68rem">margin</span></div>
+      <label>Gross Margin %</label><div class="val" id="dk_gm">0%</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div id="spark_gm" style="display:flex;align-items:flex-end;gap:1px;height:16px"></div><span class="sub">GP ÷ Revenue</span></div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #f59e0b;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-a" style="font-size:14px">🎯</div><span class="kt kt-n" id="dkt_win" style="font-size:.68rem">won</span></div>
+      <label>Win Rate</label><div class="val" id="dk_win">0%</div>
+      <div class="sub" style="margin-top:4px">Closed Won ÷ Total Leads</div>
+    </div>
+  </div>
+  <div class="cr2" style="margin-bottom:20px">
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h4 style="font-size:.78rem;font-weight:600;color:#374151">Product vs Service Revenue</h4>
+        <span style="font-size:.68rem;color:#94a3b8">By month</span>
+      </div>
+      <canvas id="cD_SalesCat" height="160"></canvas>
+    </div>
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h4 style="font-size:.78rem;font-weight:600;color:#374151">Revenue by Client</h4>
+        <span style="font-size:.68rem;color:#94a3b8">Top clients</span>
+      </div>
+      <canvas id="cD_ClientRev" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- Cash Flow KPI Section -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <span style="font-size:14px">💧</span>
+    <span style="font-size:.7rem;font-weight:600;color:#64748b;white-space:nowrap">Cash Flow</span>
+    <div style="flex:1;height:0.5px;background:#e2e8f0"></div>
+  </div>
+  <div class="kpi-row" style="margin-bottom:12px">
+    <div class="kpi" style="border-left:3px solid #16a34a;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-g" style="font-size:14px">🔄</div><span class="kt kt-u" style="font-size:.68rem">operating</span></div>
+      <label>Operating CF</label><div class="val" id="dk_cfo">₱0</div>
+      <div class="sub" style="margin-top:4px">Collections − Payments − OPEX</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #3b82f6;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-b" style="font-size:14px">🏗️</div><span class="kt kt-d" style="font-size:.68rem">investing</span></div>
+      <label>Investing CF</label><div class="val" id="dk_cfi">₱0</div>
+      <div class="sub" style="margin-top:4px">Fixed asset purchases</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #8b5cf6;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-p" style="font-size:14px">💼</div><span class="kt kt-u" style="font-size:.68rem">financing</span></div>
+      <label>Financing CF</label><div class="val" id="dk_cff">₱0</div>
+      <div class="sub" style="margin-top:4px">Paid-in capital</div>
+    </div>
+    <div class="kpi" style="border-left:3px solid #0d9488;border-radius:0 10px 10px 0">
+      <div class="kpi-top"><div class="ki ki-t" style="font-size:14px">🏦</div><span class="kt kt-u" id="dk_ecb_badge" style="font-size:.68rem">ending</span></div>
+      <label>Ending Cash Balance</label><div class="val" id="dk_ecb">₱0</div>
+      <div class="sub" style="margin-top:4px">Net cash position</div>
+    </div>
+  </div>
+  <div class="cr2" style="margin-bottom:20px">
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h4 style="font-size:.78rem;font-weight:600;color:#374151">Monthly Cash Flow</h4>
+        <span style="font-size:.68rem;color:#94a3b8">Collections vs Payments</span>
+      </div>
+      <canvas id="cD_CF" height="160"></canvas>
+    </div>
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h4 style="font-size:.78rem;font-weight:600;color:#374151">Cash Flow Components</h4>
+        <span style="font-size:.68rem;color:#94a3b8">Operating / Investing / Financing</span>
+      </div>
+      <canvas id="cD_CFComp" height="160"></canvas>
+    </div>
+  </div>
+
   <!-- IMPROVEMENT 3: Charts with inline period tabs -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
     <span style="font-size:14px">📈</span>
@@ -1575,8 +1666,71 @@ function refreshDash(){
   // Alert Strip
   buildAlertStrip();
 
-  // Activity
-  document.getElementById('recentAct').innerHTML=activity.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid #f1f5f9"><span style="font-size:18px">${a.icon}</span><span style="font-size:.8rem;color:#374151;flex:1">${a.msg}</span><span style="font-size:.72rem;color:#94a3b8;white-space:nowrap">${a.time}</span></div>`).join('');
+  // ── SALES CATEGORY KPIs ──────────────────────────────────
+  const prod=fCPO.reduce((a,p)=>a+p.prodTotal,0);
+  const svc=fCPO.reduce((a,p)=>a+p.svcTotal,0);
+  const totalLeads=leads.length;
+  const wonLeads=leads.filter(l=>l.stage==='Closed Won').length;
+  const winRate=totalLeads>0?((wonLeads/totalLeads)*100).toFixed(0):0;
+  document.getElementById('dk_prod').textContent=fmt(prod);
+  document.getElementById('dk_svc').textContent=fmt(svc);
+  document.getElementById('dk_gm').textContent=gm+'%';
+  document.getElementById('dk_win').textContent=winRate+'%';
+  document.getElementById('dk_prod_pct').textContent=rev>0?((prod/rev)*100).toFixed(0)+'% of revenue':'0% of revenue';
+  document.getElementById('dk_svc_pct').textContent=rev>0?((svc/rev)*100).toFixed(0)+'% of revenue':'0% of revenue';
+  document.getElementById('dkt_ps').textContent=fCPO.filter(p=>p.prodTotal>0).length+' POs';
+  document.getElementById('dkt_ss').textContent=fCPO.filter(p=>p.svcTotal>0).length+' POs';
+  document.getElementById('dkt_gm').textContent=gm>40?'Good':gm>20?'Fair':'Low';
+  document.getElementById('dkt_win').textContent=wonLeads+'/'+totalLeads+' leads';
+  // Sparklines for category
+  const prodM=Array(6).fill(0),svcM=Array(6).fill(0),gmM=Array(6).fill(0);
+  clientPOs.forEach(p=>{if(p.date){const m=new Date(p.date+'T00:00:00').getMonth();if(m<6){prodM[m]+=p.prodTotal;svcM[m]+=p.svcTotal;}}});
+  prodM.forEach((v,i)=>{const r=prodM[i]+svcM[i];gmM[i]=r>0?((r-cogsM[i])/r*100):0;});
+  renderSparkline('spark_prod',prodM,'#1d4ed8');
+  renderSparkline('spark_svc',svcM,'#7c3aed');
+  renderSparkline('spark_gm',gmM.map(v=>Math.max(0,v)),'#0d9488');
+
+  // ── CASH FLOW KPIs ────────────────────────────────────────
+  const cfOp=totARPaid()-totAPPaid()-opex;
+  const cfInv=-totFixedAssets();
+  const cfFin=totEquity();
+  const cfEnd=cfOp+cfInv+cfFin;
+  document.getElementById('dk_cfo').textContent=fmt(cfOp);
+  document.getElementById('dk_cfi').textContent=fmt(cfInv);
+  document.getElementById('dk_cff').textContent=fmt(cfFin);
+  document.getElementById('dk_ecb').textContent=fmt(cfEnd);
+  document.getElementById('dk_cfo').style.color=cfOp>=0?'#16a34a':'#dc2626';
+  document.getElementById('dk_ecb').style.color=cfEnd>=0?'#16a34a':'#dc2626';
+  document.getElementById('dk_ecb_badge').textContent=cfEnd>=0?'positive':'negative';
+
+  // ── SALES CATEGORY CHARTS ─────────────────────────────────
+  // Product vs Service by month
+  if(!window._dChSalesCat)window._dChSalesCat=null;
+  if(window._dChSalesCat)window._dChSalesCat.destroy();
+  const prodMCh=Array(chartLabels.length).fill(0),svcMCh=Array(chartLabels.length).fill(0);
+  fCPO.forEach(p=>{if(p.date){const m=new Date(p.date+'T00:00:00').getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0){prodMCh[i]+=p.prodTotal;svcMCh[i]+=p.svcTotal;}}});
+  window._dChSalesCat=new Chart(document.getElementById('cD_SalesCat'),{type:'bar',data:{labels:chartLabels,datasets:[{label:'Products',data:prodMCh,backgroundColor:'rgba(29,78,216,.7)',borderRadius:4},{label:'Services',data:svcMCh,backgroundColor:'rgba(124,58,237,.7)',borderRadius:4}]},options:{plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{stacked:true,ticks:{color:'#64748b',font:{size:10}}},y:{stacked:true,ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+
+  // Revenue by Client
+  if(!window._dChClientRev)window._dChClientRev=null;
+  if(window._dChClientRev)window._dChClientRev.destroy();
+  const clientTots={};fCPO.forEach(p=>{clientTots[p.client]=(clientTots[p.client]||0)+p.total;});
+  const topClients=Object.entries(clientTots).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  window._dChClientRev=new Chart(document.getElementById('cD_ClientRev'),{type:'bar',data:{labels:topClients.map(([c])=>c.split(' ')[0]),datasets:[{data:topClients.map(([,v])=>v),backgroundColor:['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899'],borderRadius:5}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+
+  // ── CASH FLOW CHARTS ─────────────────────────────────────
+  // Monthly Collections vs Payments
+  if(!window._dChCF)window._dChCF=null;
+  if(window._dChCF)window._dChCF.destroy();
+  const collM=Array(chartLabels.length).fill(0),payM=Array(chartLabels.length).fill(0);
+  arPayments.forEach(p=>{if(p.date){const m=new Date(p.date+'T00:00:00').getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)collM[i]+=p.amt;}});
+  apPayments.forEach(p=>{if(p.date){const m=new Date(p.date+'T00:00:00').getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)payM[i]+=p.amt;}});
+  window._dChCF=new Chart(document.getElementById('cD_CF'),{type:'bar',data:{labels:chartLabels,datasets:[{label:'Collections',data:collM,backgroundColor:'rgba(22,163,74,.7)',borderRadius:4},{label:'Payments',data:payM,backgroundColor:'rgba(239,68,68,.7)',borderRadius:4}]},options:{plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+
+  // CF Components bar
+  if(!window._dChCFComp)window._dChCFComp=null;
+  if(window._dChCFComp)window._dChCFComp.destroy();
+  window._dChCFComp=new Chart(document.getElementById('cD_CFComp'),{type:'bar',data:{labels:['Operating','Investing','Financing','Net Cash'],datasets:[{data:[cfOp,cfInv,cfFin,cfEnd],backgroundColor:[cfOp>=0?'#22c55e':'#ef4444','#3b82f6','#8b5cf6',cfEnd>=0?'#0d9488':'#dc2626'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#374151',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
 
   // Charts
   let chartLabels=[],chartMonthIdxs=[];
