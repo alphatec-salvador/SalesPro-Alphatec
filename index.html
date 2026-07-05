@@ -186,9 +186,55 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 .drange-btn:hover{background:#e2e8f0;color:#1e293b}
 .drange-btn.active{background:#fff;color:#1d4ed8;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 @media(max-width:900px){aside{display:none}.kpi-row{grid-template-columns:repeat(2,1fr)}.cr2,.bs-grid{grid-template-columns:1fr}.cat-grid,.ratio-grid{grid-template-columns:repeat(2,1fr)}.aging-row{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:1fr 1fr}}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 50%,#0d9488 100%);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Segoe UI',system-ui,sans-serif}
+#loginScreen.hidden{display:none}
+.login-card{background:#fff;border-radius:20px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-icon{font-size:2.5rem;margin-bottom:8px}
+.login-logo h2{font-size:1.3rem;font-weight:700;color:#1e293b;margin:0}
+.login-logo p{font-size:.8rem;color:#64748b;margin:4px 0 0}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:.75rem;font-weight:600;color:#374151;margin-bottom:5px}
+.login-field input{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.9rem;outline:none;transition:border .15s;box-sizing:border-box}
+.login-field input:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.08)}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,#1d4ed8,#0d9488);color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .15s}
+.login-btn:hover{opacity:.92}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:.8rem;margin-top:12px;display:none}
+.login-error.show{display:block}
+.login-footer{text-align:center;font-size:.72rem;color:#94a3b8;margin-top:20px}
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:20px;font-size:.72rem;cursor:pointer;transition:background .15s}
+.logout-btn:hover{background:rgba(255,255,255,.15)}
+
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">📊</div>
+      <h2>SalesOps Pro</h2>
+      <p>Alphatec Trading OPC · Business Operations</p>
+    </div>
+    <div class="login-field">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="you@alphatec.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-footer">SalesOps Pro v1.0 · Alphatec Trading OPC<br>Contact admin to reset your password</div>
+  </div>
+</div>
+
 <header>
   <div class="logo">
     <div class="logo-icon" id="logoIcon">📊</div>
@@ -197,39 +243,39 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="hright">
     <div class="date-badge" id="dateBadge"></div>
     <button class="btn btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="openModal('mCompany')">⚙️ <span id="hdrCompany">Alphatec Trading OPC</span></button>
-    <div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div>
+    <span id="userRoleBadge" class="role-badge" style="background:#1d4ed8;color:#fff;margin-right:4px"></span><div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div><button class="logout-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </header>
 <div class="layout">
 <aside>
   <div class="nav-section">
     <div class="nav-label">Overview</div>
-    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="icon" style="width:20px;height:20px;background:#eff6ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🏠</span>Dashboard</div>
+    <div class="nav-item active" data-roles="admin,finance,operations,sales" onclick="nav('dashboard',this)"><span class="icon" style="width:20px;height:20px;background:#eff6ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🏠</span>Dashboard</div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Master Data</div>
-    <div class="nav-item" onclick="nav('catalog',this)"><span class="icon" style="width:20px;height:20px;background:#f0fdfa;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📦</span>Product Catalog<span class="nb nb-teal" id="nbCat">0</span></div>
+    <div class="nav-item" data-roles="admin,operations,sales" onclick="nav('catalog',this)"><span class="icon" style="width:20px;height:20px;background:#f0fdfa;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📦</span>Product Catalog<span class="nb nb-teal" id="nbCat">0</span></div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Sales</div>
-    <div class="nav-item" onclick="nav('leads',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🎯</span>Lead Monitor<span class="nb nb-blue" id="nbL">5</span></div>
-    <div class="nav-item" onclick="nav('clientpo',this)"><span class="icon" style="width:20px;height:20px;background:#eff6ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📋</span>Client POs<span class="nb nb-blue" id="nbC">6</span></div>
-    <div class="nav-item" onclick="nav('invoices',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🧾</span>Invoices<span class="nb nb-amber" id="nbI">6</span></div>
+    <div class="nav-item" data-roles="admin,sales" onclick="nav('leads',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🎯</span>Lead Monitor<span class="nb nb-blue" id="nbL">5</span></div>
+    <div class="nav-item" data-roles="admin,operations,finance,sales" onclick="nav('clientpo',this)"><span class="icon" style="width:20px;height:20px;background:#eff6ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📋</span>Client POs<span class="nb nb-blue" id="nbC">6</span></div>
+    <div class="nav-item" data-roles="admin,operations,finance,sales" onclick="nav('invoices',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🧾</span>Invoices<span class="nb nb-amber" id="nbI">6</span></div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Purchasing</div>
-    <div class="nav-item" onclick="nav('supplierpo',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🛒</span>Supplier POs<span class="nb nb-amber" id="nbS">5</span></div>
+    <div class="nav-item" data-roles="admin,operations,finance" onclick="nav('supplierpo',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🛒</span>Supplier POs<span class="nb nb-amber" id="nbS">5</span></div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Finance</div>
-    <div class="nav-item" onclick="nav('ar',this)"><span class="icon" style="width:20px;height:20px;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">💰</span>Accounts Receivable<span class="nb nb-red" id="nbAR">3</span></div>
-    <div class="nav-item" onclick="nav('ap',this)"><span class="icon" style="width:20px;height:20px;background:#fef2f2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">💳</span>Accounts Payable<span class="nb nb-red" id="nbAP">2</span></div>
-    <div class="nav-item" onclick="nav('expenses',this)"><span class="icon" style="width:20px;height:20px;background:#faf5ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📁</span>Expenses<span class="nb nb-purple" id="nbE">4</span></div>
-    <div class="nav-item" onclick="nav('financials',this)"><span class="icon" style="width:20px;height:20px;background:#eef2ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📈</span>Financial Statements</div>
+    <div class="nav-item" data-roles="admin,finance" onclick="nav('ar',this)"><span class="icon" style="width:20px;height:20px;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">💰</span>Accounts Receivable<span class="nb nb-red" id="nbAR">3</span></div>
+    <div class="nav-item" data-roles="admin,finance" onclick="nav('ap',this)"><span class="icon" style="width:20px;height:20px;background:#fef2f2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">💳</span>Accounts Payable<span class="nb nb-red" id="nbAP">2</span></div>
+    <div class="nav-item" data-roles="admin,finance" onclick="nav('expenses',this)"><span class="icon" style="width:20px;height:20px;background:#faf5ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📁</span>Expenses<span class="nb nb-purple" id="nbE">4</span></div>
+    <div class="nav-item" data-roles="admin,finance" onclick="nav('financials',this)"><span class="icon" style="width:20px;height:20px;background:#eef2ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📈</span>Financial Statements</div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Settings</div>
-    <div class="nav-item" onclick="nav('settings',this)"><span class="icon" style="width:20px;height:20px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">⚙️</span>System Settings</div>
+    <div class="nav-item" data-roles="admin" onclick="nav('settings',this)"><span class="icon" style="width:20px;height:20px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">⚙️</span>System Settings</div>
   </div>
 </aside>
 <main>
@@ -1351,7 +1397,30 @@ function printDocPopup(){
   `;
   const win=window.open('','_blank','width=860,height=720');
   if(!win){alert('Please allow popups for this site to print.');return;}
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'</style></head><body>'+content+'</body></html>');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'
+/* ── LOGIN SCREEN ── */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 50%,#0d9488 100%);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Segoe UI',system-ui,sans-serif}
+#loginScreen.hidden{display:none}
+.login-card{background:#fff;border-radius:20px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-icon{font-size:2.5rem;margin-bottom:8px}
+.login-logo h2{font-size:1.3rem;font-weight:700;color:#1e293b;margin:0}
+.login-logo p{font-size:.8rem;color:#64748b;margin:4px 0 0}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:.75rem;font-weight:600;color:#374151;margin-bottom:5px}
+.login-field input{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.9rem;outline:none;transition:border .15s;box-sizing:border-box}
+.login-field input:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.08)}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,#1d4ed8,#0d9488);color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .15s}
+.login-btn:hover{opacity:.92}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:.8rem;margin-top:12px;display:none}
+.login-error.show{display:block}
+.login-footer{text-align:center;font-size:.72rem;color:#94a3b8;margin-top:20px}
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:20px;font-size:.72rem;cursor:pointer;transition:background .15s}
+.logout-btn:hover{background:rgba(255,255,255,.15)}
+
+</style></head><body>'+content+'</body></html>');
   win.document.close();
   win.focus();
   setTimeout(()=>{win.print();},500);
@@ -1978,7 +2047,30 @@ window._sbDb=null;
 window.sbToast=function(msg,color){try{const t=document.createElement('div');t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:99999;background:'+(color||'#1e40af')+';color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;transition:opacity .3s';t.textContent=msg;document.body.appendChild(t);requestAnimationFrame(()=>t.style.opacity='1');setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},3000);}catch(e){}};
 
 // Loader
-window.sbShowLoader=function(msg){try{let el=document.getElementById('sbLoader');if(!el){el=document.createElement('div');el.id='sbLoader';el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,.88);z-index:99998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px';el.innerHTML='<div style="width:52px;height:52px;border:4px solid rgba(255,255,255,.15);border-top-color:#d97706;border-radius:50%;animation:sbSpin .8s linear infinite"></div><div style="color:#fff;font-size:15px;font-weight:600" id="sbLoaderMsg">Loading...</div><div style="color:#d97706;font-size:12px">SalesOps Pro · Alphatec Trading OPC</div><style>@keyframes sbSpin{to{transform:rotate(360deg)}}</style>';document.body.appendChild(el);}const m=document.getElementById('sbLoaderMsg');if(m)m.textContent=msg||'Loading...';el.style.display='flex';}catch(e){}};
+window.sbShowLoader=function(msg){try{let el=document.getElementById('sbLoader');if(!el){el=document.createElement('div');el.id='sbLoader';el.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,.88);z-index:99998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px';el.innerHTML='<div style="width:52px;height:52px;border:4px solid rgba(255,255,255,.15);border-top-color:#d97706;border-radius:50%;animation:sbSpin .8s linear infinite"></div><div style="color:#fff;font-size:15px;font-weight:600" id="sbLoaderMsg">Loading...</div><div style="color:#d97706;font-size:12px">SalesOps Pro · Alphatec Trading OPC</div><style>@keyframes sbSpin{to{transform:rotate(360deg)}}
+/* ── LOGIN SCREEN ── */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 50%,#0d9488 100%);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'Segoe UI',system-ui,sans-serif}
+#loginScreen.hidden{display:none}
+.login-card{background:#fff;border-radius:20px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-icon{font-size:2.5rem;margin-bottom:8px}
+.login-logo h2{font-size:1.3rem;font-weight:700;color:#1e293b;margin:0}
+.login-logo p{font-size:.8rem;color:#64748b;margin:4px 0 0}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:.75rem;font-weight:600;color:#374151;margin-bottom:5px}
+.login-field input{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.9rem;outline:none;transition:border .15s;box-sizing:border-box}
+.login-field input:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.08)}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,#1d4ed8,#0d9488);color:#fff;border:none;border-radius:9px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .15s}
+.login-btn:hover{opacity:.92}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:.8rem;margin-top:12px;display:none}
+.login-error.show{display:block}
+.login-footer{text-align:center;font-size:.72rem;color:#94a3b8;margin-top:20px}
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:20px;font-size:.72rem;cursor:pointer;transition:background .15s}
+.logout-btn:hover{background:rgba(255,255,255,.15)}
+
+</style>';document.body.appendChild(el);}const m=document.getElementById('sbLoaderMsg');if(m)m.textContent=msg||'Loading...';el.style.display='flex';}catch(e){}};
 window.sbHideLoader=function(){try{const el=document.getElementById('sbLoader');if(el)el.style.display='none';}catch(e){}};
 
 // Save to Supabase
@@ -2251,8 +2343,134 @@ function saveAPEdit(){
   window.sbToast('✅ AP record updated','#16a34a');
 }
 
-// Boot: load from Supabase on startup
-window.sbLoadAll();
+// ══════════════════════════════════════════════════════════
+// AUTH & ROLE ENGINE
+// ══════════════════════════════════════════════════════════
+const ROLE_PERMISSIONS = {
+  admin:      {nav:['dashboard','catalog','leads','clientpo','invoices','supplierpo','ar','ap','expenses','financials','settings'], canDelete:true,  canEdit:true},
+  finance:    {nav:['dashboard','clientpo','invoices','supplierpo','ar','ap','expenses','financials'],                              canDelete:false, canEdit:true},
+  operations: {nav:['dashboard','catalog','clientpo','invoices','supplierpo'],                                                      canDelete:false, canEdit:true},
+  sales:      {nav:['dashboard','catalog','leads','clientpo','invoices'],                                                           canDelete:false, canEdit:true},
+};
+
+let currentUser=null, currentRole='admin';
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPassword').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.getElementById('loginBtn');
+  if(!email||!pass){showLoginError('Please enter your email and password.');return;}
+  btn.disabled=true;btn.textContent='Signing in…';errEl.classList.remove('show');
+  try{
+    const{data,error}=await window._sbDb.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    currentUser=data.user;
+    await loadUserRole(currentUser.id);
+    onLoginSuccess();
+  }catch(e){
+    showLoginError(e.message==='Invalid login credentials'?'Incorrect email or password. Please try again.':e.message);
+    btn.disabled=false;btn.textContent='Sign In';
+  }
+}
+
+function showLoginError(msg){
+  const el=document.getElementById('loginError');
+  el.textContent=msg;el.classList.add('show');
+}
+
+async function loadUserRole(uid){
+  try{
+    const{data,error}=await window._sbDb.from('user_roles').select('role').eq('user_id',uid).single();
+    if(error||!data){currentRole='sales';return;}// default to most restricted
+    currentRole=data.role||'sales';
+  }catch(e){currentRole='sales';}
+}
+
+function onLoginSuccess(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  // Update header
+  const email=currentUser.email;
+  const initials=email.substring(0,2).toUpperCase();
+  document.getElementById('userAvatar').textContent=initials;
+  document.getElementById('userName').textContent=email.split('@')[0];
+  const roleBadge=document.getElementById('userRoleBadge');
+  const roleColors={admin:'#1d4ed8',finance:'#16a34a',operations:'#d97706',sales:'#7c3aed'};
+  roleBadge.textContent=currentRole.toUpperCase();
+  roleBadge.style.background=roleColors[currentRole]||'#64748b';
+  // Apply role permissions to nav
+  applyRolePermissions();
+  // Load data
+  window.sbLoadAll();
+}
+
+function applyRolePermissions(){
+  const perms=ROLE_PERMISSIONS[currentRole]||ROLE_PERMISSIONS.sales;
+  // Show/hide nav items
+  document.querySelectorAll('aside .nav-item[data-roles]').forEach(item=>{
+    const roles=item.getAttribute('data-roles').split(',');
+    item.style.display=roles.includes(currentRole)?'':'none';
+  });
+  // Hide nav sections that have no visible items
+  document.querySelectorAll('aside .nav-section').forEach(section=>{
+    const visibleItems=section.querySelectorAll('.nav-item[data-roles]');
+    const anyVisible=[...visibleItems].some(item=>item.style.display!=='none');
+    const label=section.querySelector('.nav-label');
+    if(label)label.style.display=anyVisible?'':'none';
+    visibleItems.forEach(item=>{if(item.style.display==='none')item.style.display='none';});
+  });
+  // Hide delete buttons for non-admin roles
+  if(!perms.canDelete){
+    // Add a CSS rule to hide delete buttons
+    const style=document.createElement('style');
+    style.id='roleStyle';
+    style.textContent='.btn-danger{display:none!important}';
+    document.head.appendChild(style);
+  }
+  // Navigate to first allowed page
+  const firstPage=perms.nav[0]||'dashboard';
+  const firstNav=document.querySelector(`aside .nav-item[data-roles*="${firstPage}"]`)||
+                 document.querySelector('aside .nav-item[data-roles]');
+  if(firstNav)nav(firstPage,firstNav);
+}
+
+async function doLogout(){
+  if(!confirm('Sign out of SalesOps Pro?'))return;
+  try{await window._sbDb.auth.signOut();}catch(e){}
+  currentUser=null;currentRole='admin';
+  // Remove role style if added
+  const rs=document.getElementById('roleStyle');if(rs)rs.remove();
+  // Reset nav visibility
+  document.querySelectorAll('aside .nav-item[data-roles]').forEach(i=>i.style.display='');
+  document.querySelectorAll('aside .nav-label').forEach(i=>i.style.display='');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginPassword').value='';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('loginBtn').disabled=false;
+  document.getElementById('loginBtn').textContent='Sign In';
+}
+
+// Check for existing session on load
+async function checkExistingSession(){
+  if(!window._sbDb)return;
+  try{
+    const{data:{session}}=await window._sbDb.auth.getSession();
+    if(session){
+      currentUser=session.user;
+      await loadUserRole(currentUser.id);
+      onLoginSuccess();
+    }
+    // If no session, login screen stays visible (default state)
+  }catch(e){console.log('[Auth] No session:',e.message);}
+}
+
+// Boot
+(async()=>{
+  // Wait for Supabase to be ready
+  await new Promise(r=>setTimeout(r,200));
+  await checkExistingSession();
+})();
 console.log('[SB] Engine v5.0 ready ✓');
 </script>
 </body>
