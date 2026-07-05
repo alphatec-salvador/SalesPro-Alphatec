@@ -1703,6 +1703,28 @@ function refreshDash(){
   document.getElementById('dk_ecb').style.color=cfEnd>=0?'#16a34a':'#dc2626';
   document.getElementById('dk_ecb_badge').textContent=cfEnd>=0?'positive':'negative';
 
+  // Chart period setup — MUST be before all chart code
+  let chartLabels=[],chartMonthIdxs=[];
+  if(dashRange==='ytd'){chartLabels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];chartMonthIdxs=[0,1,2,3,4,5,6,7,8,9,10,11];}
+  else if(dashRange==='q1'){chartLabels=['Jan','Feb','Mar'];chartMonthIdxs=[0,1,2];}
+  else if(dashRange==='q2'){chartLabels=['Apr','May','Jun'];chartMonthIdxs=[3,4,5];}
+  else if(dashRange==='q3'){chartLabels=['Jul','Aug','Sep'];chartMonthIdxs=[6,7,8];}
+  else if(dashRange==='q4'){chartLabels=['Oct','Nov','Dec'];chartMonthIdxs=[9,10,11];}
+  else if(dashRange==='month'){chartLabels=['Wk 1','Wk 2','Wk 3','Wk 4'];chartMonthIdxs=[];}
+  else{chartLabels=['Period'];chartMonthIdxs=[];}
+
+  const rM=Array(chartLabels.length).fill(0),cM=Array(chartLabels.length).fill(0),eM=Array(chartLabels.length).fill(0);
+  if(dashRange==='month'){const mo=+document.getElementById('dashMonthPicker').value;
+    fCPO.forEach(p=>{if(p.date){const d=new Date(p.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));rM[w]+=p.total;}}});
+    fSPO.forEach(p=>{if(p.date){const d=new Date(p.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));cM[w]+=p.total;}}});
+    fExp.forEach(e=>{if(e.date){const d=new Date(e.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));eM[w]+=e.amount;}}});
+  } else if(dashRange==='custom'){rM[0]=rev;cM[0]=cogs;eM[0]=opex;}
+  else{fCPO.forEach(p=>{if(p.date){const m=new Date(p.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)rM[i]+=p.total;}});
+    fSPO.forEach(p=>{if(p.date){const m=new Date(p.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)cM[i]+=p.total;}});
+    fExp.forEach(e=>{if(e.date){const m=new Date(e.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)eM[i]+=e.amount;}});}
+  const gM=rM.map((r,i)=>r-cM[i]);
+
+  const chartOpts={plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}};
   // ── SALES CATEGORY CHARTS ─────────────────────────────────
   // Product vs Service by month
   if(!window._dChSalesCat)window._dChSalesCat=null;
@@ -1732,28 +1754,6 @@ function refreshDash(){
   if(window._dChCFComp)window._dChCFComp.destroy();
   window._dChCFComp=new Chart(document.getElementById('cD_CFComp'),{type:'bar',data:{labels:['Operating','Investing','Financing','Net Cash'],datasets:[{data:[cfOp,cfInv,cfFin,cfEnd],backgroundColor:[cfOp>=0?'#22c55e':'#ef4444','#3b82f6','#8b5cf6',cfEnd>=0?'#0d9488':'#dc2626'],borderRadius:6}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},scales:{x:{ticks:{color:'#374151',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
 
-  // Charts
-  let chartLabels=[],chartMonthIdxs=[];
-  if(dashRange==='ytd'){chartLabels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];chartMonthIdxs=[0,1,2,3,4,5,6,7,8,9,10,11];}
-  else if(dashRange==='q1'){chartLabels=['Jan','Feb','Mar'];chartMonthIdxs=[0,1,2];}
-  else if(dashRange==='q2'){chartLabels=['Apr','May','Jun'];chartMonthIdxs=[3,4,5];}
-  else if(dashRange==='q3'){chartLabels=['Jul','Aug','Sep'];chartMonthIdxs=[6,7,8];}
-  else if(dashRange==='q4'){chartLabels=['Oct','Nov','Dec'];chartMonthIdxs=[9,10,11];}
-  else if(dashRange==='month'){chartLabels=['Wk 1','Wk 2','Wk 3','Wk 4'];chartMonthIdxs=[];}
-  else{chartLabels=['Period'];chartMonthIdxs=[];}
-
-  const rM=Array(chartLabels.length).fill(0),cM=Array(chartLabels.length).fill(0),eM=Array(chartLabels.length).fill(0);
-  if(dashRange==='month'){const mo=+document.getElementById('dashMonthPicker').value;
-    fCPO.forEach(p=>{if(p.date){const d=new Date(p.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));rM[w]+=p.total;}}});
-    fSPO.forEach(p=>{if(p.date){const d=new Date(p.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));cM[w]+=p.total;}}});
-    fExp.forEach(e=>{if(e.date){const d=new Date(e.date);if(d.getMonth()===mo){const w=Math.min(3,Math.floor((d.getDate()-1)/7));eM[w]+=e.amount;}}});
-  } else if(dashRange==='custom'){rM[0]=rev;cM[0]=cogs;eM[0]=opex;}
-  else{fCPO.forEach(p=>{if(p.date){const m=new Date(p.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)rM[i]+=p.total;}});
-    fSPO.forEach(p=>{if(p.date){const m=new Date(p.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)cM[i]+=p.total;}});
-    fExp.forEach(e=>{if(e.date){const m=new Date(e.date).getMonth();const i=chartMonthIdxs.indexOf(m);if(i>=0)eM[i]+=e.amount;}});}
-  const gM=rM.map((r,i)=>r-cM[i]);
-
-  const chartOpts={plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{ticks:{color:'#64748b',font:{size:10}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}};
 
   if(dCh[0])dCh[0].destroy();
   dCh[0]=new Chart(document.getElementById('cD1'),{type:'bar',data:{labels:chartLabels,datasets:[{label:'Revenue',data:rM,backgroundColor:'rgba(55,138,221,.7)',borderRadius:4},{label:'COGS',data:cM,backgroundColor:'rgba(239,159,39,.7)',borderRadius:4},{label:'GP',data:gM,type:'line',borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.08)',tension:.4,fill:true,pointBackgroundColor:'#1D9E75',pointRadius:3}]},options:chartOpts});
