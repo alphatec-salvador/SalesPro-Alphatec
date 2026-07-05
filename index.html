@@ -243,7 +243,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="hright">
     <div class="date-badge" id="dateBadge"></div>
     <button class="btn btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="openModal('mCompany')">⚙️ <span id="hdrCompany">Alphatec Trading OPC</span></button>
-    <span id="userRoleBadge" class="role-badge" style="background:#1d4ed8;color:#fff;margin-right:4px"></span><div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div><button class="logout-btn" onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.5);color:#fff;padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer">⏻ Sign Out</button>
+    <span id="userRoleBadge" class="role-badge" style="background:#1d4ed8;color:#fff;margin-right:4px"></span><div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div><button onclick="doLogout()" style="background:#ef4444;border:none;color:#fff;padding:6px 16px;border-radius:20px;font-size:.75rem;font-weight:700;cursor:pointer;margin-left:4px">⏻ Sign Out</button>
   </div>
 </header>
 <div class="layout">
@@ -718,7 +718,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
         <select class="fc" id="eStF" onchange="renderExp()" style="width:120px;font-size:.75rem"><option value="">All Status</option><option>Pending</option><option>Approved</option><option>Rejected</option></select>
       </div>
     </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Ref</th><th>Date</th><th>Category</th><th>Description</th><th>Payee</th><th>Amount</th><th>Mode</th><th>Month</th><th>Status</th><th>Actions</th></tr></thead><tbody id="expTbl"></tbody>
+    <div class="tbl-wrap"><table><thead><tr><th>Ref</th><th>Date</th><th>Category</th><th>Payee / TIN</th><th>Total Amount</th><th>Vatable</th><th>VAT 12%</th><th>VAT Exempt</th><th>Mode</th><th>Month</th><th>Status</th><th>Actions</th></tr></thead><tbody id="expTbl"></tbody>
     <tfoot><tr><td colspan="5">TOTAL</td><td id="eFT">₱0</td><td colspan="4"></td></tr></tfoot></table></div>
   </div>
 </div>
@@ -994,23 +994,35 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mAP')">Cancel</button><button class="btn btn-success" onclick="saveAPPay()">Post Payment</button></div></div></div>
 
 <!-- Expense -->
-<div class="modal-overlay" id="mExp"><div class="modal" style="width:660px"><div class="mh"><div><h3>Add Expense</h3></div><button class="mc" onclick="closeModal('mExp')">✕</button></div>
+<div class="modal-overlay" id="mExp"><div class="modal" style="width:700px"><div class="mh"><div><h3>Add Expense</h3></div><button class="mc" onclick="closeModal('mExp')">✕</button></div>
 <div class="mb">
   <div class="g3">
     <div class="fg"><label>Ref</label><input class="fc" id="eRef"/></div>
     <div class="fg"><label>Date</label><input class="fc" id="eDt" type="date"/></div>
     <div class="fg"><label>Month</label><select class="fc" id="eMon"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
     <div class="fg"><label>Category</label><select class="fc" id="eCat"></select></div>
-    <div class="fg"><label>Amount (₱)</label><input class="fc" id="eAmt" type="number"/></div>
     <div class="fg"><label>Mode</label><select class="fc" id="eMod"><option>Cash</option><option>Bank Transfer</option><option>Check</option><option>Credit Card</option></select></div>
-  </div>
-  <div class="g2" style="margin-top:10px">
-    <div class="fg"><label>Payee</label><input class="fc" id="ePayee"/></div>
     <div class="fg"><label>Status</label><select class="fc" id="eSt"><option>Pending</option><option>Approved</option></select></div>
   </div>
-  <div class="fg" style="margin-top:10px"><label>Description</label><textarea class="fc" id="eDesc"></textarea></div>
+  <div class="g2" style="margin-top:10px">
+    <div class="fg"><label>Payee / Supplier</label><input class="fc" id="ePayee"/></div>
+    <div class="fg"><label>TIN Number</label><input class="fc" id="eTin" placeholder="000-000-000-000"/></div>
+  </div>
+  <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-top:10px">
+    <div style="font-size:.72rem;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">🧾 BIR Tax Breakdown</div>
+    <div class="g3">
+      <div class="fg"><label>Total Amount (₱)</label><input class="fc" id="eAmt" type="number" placeholder="0.00" oninput="calcExpVAT()"/></div>
+      <div class="fg"><label>Vatable Amount (₱)</label><input class="fc" id="eVatable" type="number" placeholder="auto" oninput="calcExpVATFromVatable()"/></div>
+      <div class="fg"><label>VAT Amount 12% (₱)</label><input class="fc" id="eVat" type="number" placeholder="auto" readonly style="background:#f1f5f9;color:#16a34a;font-weight:600"/></div>
+    </div>
+    <div class="g2" style="margin-top:8px">
+      <div class="fg"><label>VAT Exempt Amount (₱)</label><input class="fc" id="eVatExempt" type="number" placeholder="0.00" oninput="calcExpVATExempt()"/></div>
+      <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:4px"><div style="font-size:.72rem;color:#64748b">Leave Vatable blank if fully VAT Exempt. VAT = Vatable × 12%</div></div>
+    </div>
+  </div>
+  <div class="fg" style="margin-top:10px"><label>Description / Particulars</label><textarea class="fc" id="eDesc"></textarea></div>
 </div>
-<div class="mf"><button class="btn btn-ghost" onclick="closeModal('mExp')">Cancel</button><button class="btn btn-primary" onclick="saveExp()">Save</button></div></div></div>
+<div class="mf"><button class="btn btn-ghost" onclick="closeModal('mExp')">Cancel</button><button class="btn btn-primary" onclick="saveExp()">Save Expense</button></div></div></div>
 
 
 <!-- AR Edit Modal -->
@@ -1295,7 +1307,7 @@ function openModal(id){
     if(iClEl)iClEl.setAttribute('list','dlClientsInv');
   }
   if(id==='mAR')fillARSel();if(id==='mAP')fillAPSel(); // kept but value restored via setTimeout
-  if(id==='mExp'){document.getElementById('eRef').value='EXP-'+Date.now().toString().slice(-6);document.getElementById('eDt').value=today();document.getElementById('eMon').selectedIndex=new Date().getMonth();fillExpCatSelect();}
+  if(id==='mExp'){document.getElementById('eRef').value='EXP-'+Date.now().toString().slice(-6);document.getElementById('eDt').value=today();document.getElementById('eMon').selectedIndex=new Date().getMonth();document.getElementById('eAmt').value='';document.getElementById('eVatable').value='';document.getElementById('eVat').value='';document.getElementById('eVatExempt').value='';document.getElementById('eTin').value='';document.getElementById('ePayee').value='';document.getElementById('eDesc').value='';fillExpCatSelect();}
   if(id==='mBudget')renderBudgetForm();
   if(id==='mCat'){editingCatId=null;document.getElementById('mCatTitle').textContent='Add Catalog Item';['catCode','catDesc','catGroup'].forEach(x=>document.getElementById(x).value='');['catSP','catPC','catQtyIn','catQtyOrd','catQtyAlloc'].forEach(x=>document.getElementById(x).value=0);document.getElementById('catReorder').value=5;document.getElementById('catType').value='Product';toggleStockFields();calcCatMargin();}
   if(id==='mCatMgr')renderCatMgrList();
@@ -1408,9 +1420,37 @@ function fillExpCatSelect(){const s=document.getElementById('eCat');if(s)s.inner
 function buildMonthSel(){document.getElementById('monthSel').innerHTML=['All','January','February','March','April','May','June'].map(m=>`<button class="mb2${m===selMonth?' active':''}" onclick="selMonth='${m}';buildMonthSel();renderExp();renderExpCh()">${m}</button>`).join('');}
 function renderBudgetForm(){document.getElementById('budgetForm').innerHTML=CATS.map(c=>`<div class="fg" style="margin-bottom:12px"><label>${c.icon} ${c.name}</label><input class="fc" type="number" id="bg_${c.name.replace(/\W/g,'_')}" value="${budgets[c.name]||0}"/></div>`).join('');}
 function saveBudgets(){CATS.forEach(c=>{const el=document.getElementById('bg_'+c.name.replace(/\W/g,'_'));if(el)budgets[c.name]=+el.value||0;});closeModal('mBudget');renderExp();renderExpCh();}
-function saveExp(){const ref=document.getElementById('eRef').value.trim(),amt=+document.getElementById('eAmt').value||0;if(!ref||!amt)return;const _ne={id:expId++,ref,date:document.getElementById('eDt').value,month:document.getElementById('eMon').value,cat:document.getElementById('eCat').value,desc:document.getElementById('eDesc').value,payee:document.getElementById('ePayee').value,amount:amt,mode:document.getElementById('eMod').value,status:document.getElementById('eSt').value};expenses.push(_ne);logA('📁',`Expense ${ref} — ${fmt(amt)}`);closeModal('mExp');renderExp();renderExpCh();updateBadges();if(window.sbSave)window.sbSave('expenses',{id:_ne.id,ref:_ne.ref,date:_ne.date||null,month:_ne.month||'',category:_ne.cat||'',description:_ne.desc||'',payee:_ne.payee||'',amount:_ne.amount||0,payment_mode:_ne.mode||'',status:_ne.status||'Pending'});}
-function approveExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Approved';renderExp();renderExpCh();refreshDash();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',amount:e.amount||0,payment_mode:e.mode||'',status:'Approved'});}
-function rejectExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Rejected';renderExp();renderExpCh();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',amount:e.amount||0,payment_mode:e.mode||'',status:'Rejected'});}
+function calcExpVAT(){
+  const total=+document.getElementById('eAmt').value||0;
+  if(total>0){
+    const vatable=+(total/1.12).toFixed(2);
+    const vat=+(vatable*0.12).toFixed(2);
+    document.getElementById('eVatable').value=vatable;
+    document.getElementById('eVat').value=vat;
+  } else {
+    document.getElementById('eVatable').value='';
+    document.getElementById('eVat').value='';
+  }
+}
+function calcExpVATFromVatable(){
+  const vatable=+document.getElementById('eVatable').value||0;
+  const vat=+(vatable*0.12).toFixed(2);
+  document.getElementById('eVat').value=vatable>0?vat:'';
+  const exempt=+document.getElementById('eVatExempt').value||0;
+  const total=+(vatable+vat+exempt).toFixed(2);
+  if(vatable>0)document.getElementById('eAmt').value=total;
+}
+function calcExpVATExempt(){
+  const exempt=+document.getElementById('eVatExempt').value||0;
+  const vatable=+document.getElementById('eVatable').value||0;
+  const vat=+document.getElementById('eVat').value||0;
+  if(exempt>0&&vatable===0){
+    document.getElementById('eAmt').value=exempt;
+  }
+}
+function saveExp(){const ref=document.getElementById('eRef').value.trim(),amt=+document.getElementById('eAmt').value||0;if(!ref||!amt)return;const vatable=+document.getElementById('eVatable').value||0;const vat=+document.getElementById('eVat').value||0;const vatExempt=+document.getElementById('eVatExempt').value||0;const tin=document.getElementById('eTin').value.trim();const _ne={id:expId++,ref,date:document.getElementById('eDt').value,month:document.getElementById('eMon').value,cat:document.getElementById('eCat').value,desc:document.getElementById('eDesc').value,payee:document.getElementById('ePayee').value,tin,amount:amt,vatable,vat,vatExempt,mode:document.getElementById('eMod').value,status:document.getElementById('eSt').value};expenses.push(_ne);logA('📁',`Expense ${ref} — ${fmt(amt)}`);closeModal('mExp');renderExp();renderExpCh();updateBadges();if(window.sbSave)window.sbSave('expenses',{id:_ne.id,ref:_ne.ref,date:_ne.date||null,month:_ne.month||'',category:_ne.cat||'',description:_ne.desc||'',payee:_ne.payee||'',tin_number:_ne.tin||'',amount:_ne.amount||0,vatable_amount:_ne.vatable||0,vat_amount:_ne.vat||0,vat_exempt:_ne.vatExempt||0,payment_mode:_ne.mode||'',status:_ne.status||'Pending'});}
+function approveExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Approved';renderExp();renderExpCh();refreshDash();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',tin_number:e.tin||'',amount:e.amount||0,vatable_amount:e.vatable||0,vat_amount:e.vat||0,vat_exempt:e.vatExempt||0,payment_mode:e.mode||'',status:'Approved'});}
+function rejectExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Rejected';renderExp();renderExpCh();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',tin_number:e.tin||'',amount:e.amount||0,vatable_amount:e.vatable||0,vat_amount:e.vat||0,vat_exempt:e.vatExempt||0,payment_mode:e.mode||'',status:'Rejected'});}
 function renderExp(){
   buildMonthSel();fillExpCatSelect();
   const cf=document.getElementById('eCatF');if(cf)cf.innerHTML='<option value="">All Categories</option>'+CATS.map(c=>`<option>${c.name}</option>`).join('');
@@ -1420,7 +1460,7 @@ function renderExp(){
   const s=(document.getElementById('eSrch')?document.getElementById('eSrch').value||'':'').toLowerCase(),cfv=document.getElementById('eCatF')?document.getElementById('eCatF').value:'',sfv=document.getElementById('eStF')?document.getElementById('eStF').value:'';
   const f=expenses.filter(e=>(selMonth==='All'||e.month===selMonth)&&(!s||(e.ref+e.cat+e.desc+e.payee).toLowerCase().includes(s))&&(!cfv||e.cat===cfv)&&(!sfv||e.status===sfv));
   const stC={Approved:'bg',Pending:'ba',Rejected:'br'};
-  document.getElementById('expTbl').innerHTML=f.length?f.map(e=>`<tr><td style="font-weight:600;color:#7c3aed;font-size:.75rem">${e.ref}</td><td>${e.date||'—'}</td><td><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:600;background:${(CATS.find(c=>c.name===e.cat)?.color||'#64748b')+'22'};color:${CATS.find(c=>c.name===e.cat)?.color||'#64748b'}">${CATS.find(c=>c.name===e.cat)?.icon||''} ${e.cat}</span></td><td style="font-size:.75rem;color:#475569;max-width:160px">${e.desc||'—'}</td><td>${e.payee||'—'}</td><td style="font-weight:700">${fmt(e.amount)}</td><td style="font-size:.75rem">${e.mode}</td><td><span class="badge bgr">${e.month}</span></td><td><span class="badge ${stC[e.status]||'bgr'}">${e.status}</span></td><td style="display:flex;gap:4px">${e.status==='Pending'?`<button class="btn btn-success btn-sm" onclick="approveExp(${e.id})">✓</button><button class="btn btn-danger" onclick="rejectExp(${e.id})">✕</button>`:''}<button class="btn btn-danger" onclick="deleteExp(${e.id})">🗑</button></td></tr>`).join(''):`<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px">No expenses.</td></tr>`;
+  document.getElementById('expTbl').innerHTML=f.length?f.map(e=>`<tr><td style="font-weight:600;color:#7c3aed;font-size:.75rem">${e.ref}</td><td>${e.date||'—'}</td><td><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:600;background:${(CATS.find(c=>c.name===e.cat)?.color||'#64748b')+'22'};color:${CATS.find(c=>c.name===e.cat)?.color||'#64748b'}">${CATS.find(c=>c.name===e.cat)?.icon||''} ${e.cat}</span></td><td><div style="font-weight:600;font-size:.8rem">${e.payee||'—'}</div>${e.tin?`<div style="font-size:.68rem;color:#94a3b8">TIN: ${e.tin}</div>`:''}</td><td style="font-weight:700">${fmt(e.amount)}</td><td style="font-size:.78rem;color:#0d9488">${e.vatable?fmt(e.vatable):'—'}</td><td style="font-size:.78rem;color:#16a34a">${e.vat?fmt(e.vat):'—'}</td><td style="font-size:.78rem;color:#64748b">${e.vatExempt?fmt(e.vatExempt):'—'}</td><td style="font-size:.75rem">${e.mode}</td><td><span class="badge bgr">${e.month}</span></td><td><span class="badge ${stC[e.status]||'bgr'}">${e.status}</span></td><td style="display:flex;gap:4px">${e.status==='Pending'?`<button class="btn btn-success btn-sm" onclick="approveExp(${e.id})">✓</button><button class="btn btn-danger" onclick="rejectExp(${e.id})">✕</button>`:''}<button class="btn btn-danger" onclick="deleteExp(${e.id})">🗑</button></td></tr>`).join(''):`<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:24px">No expenses.</td></tr>`;
   document.getElementById('eFT').textContent=fmt(f.reduce((a,e)=>a+e.amount,0));
 }
 let expCh=[null,null,null,null];
@@ -1930,7 +1970,7 @@ function exportExcel(module){
     dlWorkbook(wb,`${co}_Accounts_Payable`);
   }
   else if(module==='expenses'){
-    const rows=expenses.map(e=>({'Ref':e.ref,'Date':e.date||'','Month':e.month,'Category':e.cat,'Description':e.desc||'','Payee':e.payee||'','Amount (₱)':e.amount,'Mode':e.mode,'Status':e.status}));
+    const rows=expenses.map(e=>({'Ref':e.ref,'Date':e.date||'','Month':e.month,'Category':e.cat,'Description':e.desc||'','Payee / Supplier':e.payee||'','TIN Number':e.tin||'','Total Amount (₱)':e.amount,'Vatable Amount (₱)':e.vatable||0,'VAT 12% (₱)':e.vat||0,'VAT Exempt (₱)':e.vatExempt||0,'Payment Mode':e.mode,'Status':e.status}));
     const ws=XLSX.utils.json_to_sheet(rows);autoWidth(ws,rows);XLSX.utils.book_append_sheet(wb,ws,'Expenses');
     // Budget vs Actual summary
     const bvRows=CATS.map(c=>{const actual=expenses.filter(e=>e.cat===c.name&&e.status==='Approved').reduce((a,e)=>a+e.amount,0);const bgt=budgets[c.name]||0;return{'Category':c.name,'Budget (₱)':bgt,'Actual (₱)':actual,'Variance (₱)':bgt-actual,'Used %':bgt>0?+((actual/bgt)*100).toFixed(1):0,'Over Budget':actual>bgt?'YES':'NO'};});
@@ -2084,7 +2124,7 @@ window.sbLoadAll=async function(){
   await loadInto('client_pos',clientPOs,r=>({id:r.id,num:r.po_number,client:r.client_name,date:r.date||'',status:r.status||'',terms:r.terms||'',prodTotal:+r.prod_total||0,svcTotal:+r.svc_total||0,total:+r.total_amount||0}));
   await loadInto('supplier_pos',supplierPOs,r=>({id:r.id,num:r.po_number,supplier:r.supplier_name,linked:r.linked_cpo||'',date:r.date||'',delivery:r.delivery||'',terms:r.terms||'Full Payment',due:r.due_date||'',status:r.status||'',lines:[{type:'product'}],total:+r.total_amount||0,paid:+r.paid||0,balance:+r.balance||0}));
   await loadInto('invoices',invoices,r=>({id:r.id,num:r.invoice_number,poRef:r.po_ref||'',client:r.client_name,date:r.date||'',due:r.due_date||'',terms:r.terms||'',amount:+r.total_amount||0,paid:+r.amount_paid||0,balance:(+r.total_amount||0)-(+r.amount_paid||0),status:r.status||''}));
-  await loadInto('expenses',expenses,r=>({id:r.id,ref:r.ref,date:r.date||'',month:r.month||'',cat:r.category||'',desc:r.description||'',payee:r.payee||'',amount:+r.amount||0,mode:r.payment_mode||'',status:r.status||'Pending'}));
+  await loadInto('expenses',expenses,r=>({id:r.id,ref:r.ref,date:r.date||'',month:r.month||'',cat:r.category||'',desc:r.description||'',payee:r.payee||'',tin:r.tin_number||'',amount:+r.amount||0,vatable:+r.vatable_amount||0,vat:+r.vat_amount||0,vatExempt:+r.vat_exempt||0,mode:r.payment_mode||'',status:r.status||'Pending'}));
 
   // Rebuild derived arrays
   arRecords.splice(0,arRecords.length);
