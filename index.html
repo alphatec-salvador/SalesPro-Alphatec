@@ -243,7 +243,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="hright">
     <div class="date-badge" id="dateBadge"></div>
     <button class="btn btn-ghost" style="font-size:.72rem;padding:5px 10px" onclick="openModal('mCompany')">⚙️ <span id="hdrCompany">Alphatec Trading OPC</span></button>
-    <span id="userRoleBadge" class="role-badge" style="background:#1d4ed8;color:#fff;margin-right:4px"></span><div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div><button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    <span id="userRoleBadge" class="role-badge" style="background:#1d4ed8;color:#fff;margin-right:4px"></span><div class="user-chip"><div class="avatar" id="userAvatar">MS</div><span id="userName">M. Salvador</span></div><button class="logout-btn" onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.5);color:#fff;padding:5px 14px;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer">⏻ Sign Out</button>
   </div>
 </header>
 <div class="layout">
@@ -1397,13 +1397,7 @@ function printDocPopup(){
   `;
   const win=window.open('','_blank','width=860,height=720');
   if(!win){alert('Please allow popups for this site to print.');return;}
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'
-
-.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase}
-.logout-btn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:20px;font-size:.72rem;cursor:pointer;transition:background .15s}
-.logout-btn:hover{background:rgba(255,255,255,.15)}
-
-</style></head><body>'+content+'</body></html>');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'</style></head><body>'+content+'</body></html>');
   win.document.close();
   win.focus();
   setTimeout(()=>{win.print();},500);
@@ -2121,7 +2115,11 @@ window.sbLoadAll=async function(){
   if(loaded>0){
     window.sbToast('☁️ Loaded '+loaded+' tables','#1e40af');
     setTimeout(()=>{
-      try{refreshDash();}catch(e){}
+      try{
+        // Navigate to dashboard with fresh data
+        const dashNav=document.querySelector("aside .nav-item[data-roles*='dashboard']")||document.querySelector('aside .nav-item');
+        if(dashNav){nav('dashboard',dashNav);}else{refreshDash();}
+      }catch(e){}
       try{renderCatalog();}catch(e){}
       try{updateBadges();}catch(e){}
       try{updateNumPreviews();}catch(e){}
@@ -2129,7 +2127,10 @@ window.sbLoadAll=async function(){
     },100);
   }else{
     console.log('[SB] No data yet — ready for first entry');
-    try{refreshDash();}catch(e){}
+    try{
+      const dashNav=document.querySelector("aside .nav-item[data-roles*='dashboard']")||document.querySelector('aside .nav-item');
+      if(dashNav){nav('dashboard',dashNav);}else{refreshDash();}
+    }catch(e){}
   }
   return true;
 };
@@ -2350,48 +2351,45 @@ async function loadUserRole(uid){
 function onLoginSuccess(){
   document.getElementById('loginScreen').classList.add('hidden');
   // Update header
-  const email=currentUser.email;
-  const initials=email.substring(0,2).toUpperCase();
+  const email=currentUser.email||'user';
+  const namePart=email.split('@')[0];
+  const initials=namePart.substring(0,2).toUpperCase();
   document.getElementById('userAvatar').textContent=initials;
-  document.getElementById('userName').textContent=email.split('@')[0];
+  document.getElementById('userName').textContent=namePart;
   const roleBadge=document.getElementById('userRoleBadge');
   const roleColors={admin:'#1d4ed8',finance:'#16a34a',operations:'#d97706',sales:'#7c3aed'};
   roleBadge.textContent=currentRole.toUpperCase();
   roleBadge.style.background=roleColors[currentRole]||'#64748b';
-  // Apply role permissions to nav
+  // Apply role permissions to nav (without navigating yet)
   applyRolePermissions();
-  // Load data
-  window.sbLoadAll();
+  // Load data — navigation happens inside sbLoadAll after data is ready
+  try{window.sbLoadAll();}catch(e){console.error('[Auth] sbLoadAll error:',e.message);}
 }
 
 function applyRolePermissions(){
   const perms=ROLE_PERMISSIONS[currentRole]||ROLE_PERMISSIONS.sales;
-  // Show/hide nav items
+  // Show/hide nav items based on role
   document.querySelectorAll('aside .nav-item[data-roles]').forEach(item=>{
     const roles=item.getAttribute('data-roles').split(',');
-    item.style.display=roles.includes(currentRole)?'':'none';
+    item.style.display=roles.includes(currentRole)?'flex':'none';
   });
-  // Hide nav sections that have no visible items
+  // Hide nav section labels that have no visible items
   document.querySelectorAll('aside .nav-section').forEach(section=>{
-    const visibleItems=section.querySelectorAll('.nav-item[data-roles]');
-    const anyVisible=[...visibleItems].some(item=>item.style.display!=='none');
+    const items=[...section.querySelectorAll('.nav-item[data-roles]')];
+    const anyVisible=items.some(item=>item.style.display!=='none');
     const label=section.querySelector('.nav-label');
     if(label)label.style.display=anyVisible?'':'none';
-    visibleItems.forEach(item=>{if(item.style.display==='none')item.style.display='none';});
   });
   // Hide delete buttons for non-admin roles
+  const existingStyle=document.getElementById('roleStyle');
+  if(existingStyle)existingStyle.remove();
   if(!perms.canDelete){
-    // Add a CSS rule to hide delete buttons
     const style=document.createElement('style');
     style.id='roleStyle';
     style.textContent='.btn-danger{display:none!important}';
     document.head.appendChild(style);
   }
-  // Navigate to first allowed page
-  const firstPage=perms.nav[0]||'dashboard';
-  const firstNav=document.querySelector(`aside .nav-item[data-roles*="${firstPage}"]`)||
-                 document.querySelector('aside .nav-item[data-roles]');
-  if(firstNav)nav(firstPage,firstNav);
+  // Navigation happens after data loads (in sbLoadAll completion)
 }
 
 async function doLogout(){
