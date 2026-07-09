@@ -1144,8 +1144,9 @@ let seqCounters={INV:0,CPO:0,SPO:0,QT:0};
 const yr=new Date().getFullYear();
 function nextNum(prefix){seqCounters[prefix]++;return prefix+'-'+yr+'-'+String(seqCounters[prefix]).padStart(3,'0');}
 function peekNum(prefix){return prefix+'-'+yr+'-'+String(seqCounters[prefix]+1).padStart(3,'0');}
-function nextQNum(){seqCounters.QT++;return String(seqCounters.QT).padStart(3,'0');}
-function peekQNum(){return String(seqCounters.QT+1).padStart(3,'0');}
+function qtnStamp(){const n=new Date();return String(n.getFullYear()).slice(2)+String(n.getMonth()+1).padStart(2,'0');}
+function nextQNum(){seqCounters.QT++;return 'QTN-'+qtnStamp()+'-'+String(seqCounters.QT).padStart(3,'0');}
+function peekQNum(){return 'QTN-'+qtnStamp()+'-'+String(seqCounters.QT+1).padStart(3,'0');}
 function updateNumPreviews(){
   const ip=document.getElementById('invPrefix').value||'INV';
   const cp=document.getElementById('cpoPrefix').value||'CPO';
@@ -1690,7 +1691,7 @@ function saveQuote(){
   };
   if(editingQId){quotations=quotations.map(x=>x.id===editingQId?q:x);editingQId=null;}
   else quotations.push(q);
-  logA('📝',`Quotation ${num} — ${client} — ${fmt(total)}`);
+  logA('📝',`Quotation ${num} — ${client} — ${fmt(vatInc)}`);
   closeModal('mQuote');
   renderQuotes();
   updateBadges();
@@ -1834,12 +1835,31 @@ function buildQuoteHTML(q){
       <div class="t-row"><span>VAT Amount (12%)</span><span style="color:#d97706">${fmt(vatAmt)}</span></div>
       <div class="t-row t-grand"><span>TOTAL (VAT Inclusive)</span><span style="color:#16a34a">${fmt(vatInc)}</span></div>
     </div>
-    ${q.remarks?`<div class="remarks"><strong>Remarks / Scope:</strong> ${q.remarks}</div>`:''}
-    <div class="accept">
-      To accept this quotation, please issue a Purchase Order referencing <strong>${q.num}</strong>.
-      ${company.email?` Contact us at <strong>${company.email}</strong>.`:''}
+    ${q.remarks?`<div class="remarks"><strong>Scope of Work / Remarks:</strong><br>${q.remarks}</div>`:''}
+    <div style="margin-bottom:14px;padding:14px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:.78rem;color:#374151">
+      <div style="font-size:.68rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Terms &amp; Conditions</div>
+      <ol style="padding-left:18px;line-height:2">
+        <li>Rate is VAT Inclusive.</li>
+        <li>Validity of this quote is within 30 days from issued date of this quote.</li>
+        <li style="line-height:1.6">Payment terms: Cash before delivery<br>
+          <span style="display:block;margin-top:6px;margin-left:0;padding:8px 12px;background:#fffbeb;border-left:3px solid #d97706;border-radius:0 6px 6px 0;font-size:.76rem;color:#374151">
+            Check deposit to: <strong>Eastwest Bank</strong><br>
+            Account Name: <strong>Alphatec Trading OPC</strong><br>
+            Account Number: <strong>2000 6139 4116</strong>
+          </span>
+        </li>
+        <li>Free Delivery to site (Metro Manila only).</li>
+        <li>Issuance of Purchase Order or Notice to Proceed shall be the basis of an offer to buy.</li>
+      </ol>
     </div>
-    <div class="footer">Thank you for the opportunity! &nbsp;·&nbsp; ${company.name||'Alphatec Trading OPC'} &nbsp;·&nbsp; ${company.tagline||'HVAC & Refrigeration Solutions'}</div>
+    <div style="margin-bottom:16px;padding:12px 16px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:.8rem;color:#1e293b;line-height:1.7">
+      We hope our offer meets your requirement and look forward to a detailed discussion with you.<br><br>
+      Thank you.
+    </div>
+    <div class="footer">
+      ${company.name||'Alphatec Trading OPC'} &nbsp;·&nbsp; ${company.tagline||'HVAC &amp; Refrigeration Solutions'}<br>
+      ${addr} &nbsp;·&nbsp; ${company.email||''}${company.phone?' · '+company.phone:''}
+    </div>
   </div></body></html>`;
 }
 
@@ -1850,23 +1870,35 @@ function openQuoteEmail(id){
   document.getElementById('qEmailBody').value=
 `Dear ${q.client},
 
-Please find our quotation attached for your reference.
+Good day!
 
-Quotation No: ${q.num}
-Date: ${q.date}
-Valid Until: ${q.validUntil||'30 days from date'}
-Payment Terms: ${q.terms}
-Total Amount (VAT Inclusive): ${fmt(q.vatInc||q.total)}
+Please find attached our formal quotation for your reference and consideration.
 
-To view the full formatted quotation with itemized details, please click the link below or open the attached file.
+Quotation No : ${q.num}
+Date         : ${q.date}
+Valid Until  : ${q.validUntil||'30 days from date'}
+Total Amount : ${fmt(q.vatInc||q.total)} (VAT Inclusive)
 
-Kindly send your Purchase Order to proceed. We look forward to your confirmation.
+TERMS & CONDITIONS:
+1. Rate is VAT Inclusive.
+2. Validity of this quote is within 30 days from issued date.
+3. Payment terms: Cash before delivery
+   Check deposit to Eastwest Bank
+   Account Name:   Alphatec Trading OPC
+   Account Number: 2000 6139 4116
+4. Free Delivery to site (Metro Manila only).
+5. Issuance of Purchase Order or Notice to Proceed shall be the basis of an offer to buy.
+
+We hope our offer meets your requirement and look forward to a detailed discussion with you.
+
+Thank you.
 
 Best regards,
-${company.owner||company.name||'Alphatec Trading OPC'}
+${company.owner||'M. Salvador'}
 ${company.name||'Alphatec Trading OPC'}
 ${company.email||''}${company.phone?' | '+company.phone:''}
-Unit 305 Brain Train Center Sta Rosa Business Park, Greenfield City, Don Jose, Sta Rosa City, Laguna 4026`;
+Unit 305 Brain Train Center Sta Rosa Business Park
+Greenfield City, Don Jose, Sta Rosa City, Laguna 4026`;
   window._pendingQuoteEmailId=id;
   openModal('mQEmail');
 }
