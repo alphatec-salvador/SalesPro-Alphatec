@@ -825,9 +825,10 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
     <div class="li-grid li-head"><span>Product / Service</span><span>Unit</span><span style="text-align:right">Qty</span><span style="text-align:right">Unit Price</span><span style="text-align:right">Total</span><span></span></div>
     <div id="qLines"></div>
     <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addQLine()">+ Add Line</button>
-    <div style="display:flex;justify-content:flex-end;gap:24px;margin-top:14px;background:#f8fafc;border-radius:8px;padding:12px 16px;font-size:.85rem">
-      <span>Subtotal: <strong id="qMS">₱0</strong></span>
-      <span style="color:#1d4ed8;font-weight:700;font-size:.95rem">TOTAL: <strong id="qMT">₱0</strong></span>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:14px;background:#f8fafc;border-radius:8px;padding:12px 16px;font-size:.82rem">
+      <div style="display:flex;gap:24px"><span style="color:#64748b">VAT Exclusive (VAT Ex):</span><strong id="qMS">₱0</strong></div>
+      <div style="display:flex;gap:24px"><span style="color:#64748b">VAT Amount (12%):</span><strong id="qMVat" style="color:#d97706">₱0</strong></div>
+      <div style="display:flex;gap:24px;border-top:2px solid #1d4ed8;padding-top:8px;margin-top:4px"><span style="color:#1d4ed8;font-weight:700;font-size:.95rem">TOTAL (VAT Inclusive):</span><strong id="qMT" style="color:#1d4ed8;font-size:.95rem">₱0</strong></div>
     </div>
     <div class="fg" style="margin-top:10px"><label>Status</label><select class="fc" id="qSt"><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option></select></div>
   </div>
@@ -835,15 +836,15 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 </div></div>
 
 <!-- QUOTATION Email Modal -->
-<div class="modal-overlay" id="mQEmail"><div class="modal" style="width:560px">
-  <div class="mh"><div><h3>📧 Email Quotation</h3><p>Send quote directly to client</p></div><button class="mc" onclick="closeModal('mQEmail')">✕</button></div>
+<div class="modal-overlay" id="mQEmail"><div class="modal" style="width:580px">
+  <div class="mh"><div><h3>📧 Email Quotation</h3><p>Send formatted quote to client</p></div><button class="mc" onclick="closeModal('mQEmail')">✕</button></div>
   <div class="mb">
-    <div class="alert ai" style="margin-bottom:14px">💡 This will open your default email app pre-filled with the quotation details.</div>
+    <div class="alert ai" style="margin-bottom:14px">💡 Clicking <strong>Send</strong> will: (1) open the formatted quotation in a new tab — save it as PDF and attach to your email, then (2) open your email app with the message pre-filled.</div>
     <div class="fg" style="margin-bottom:12px"><label>To (Client Email)</label><input class="fc" id="qEmailTo" placeholder="client@email.com"/></div>
     <div class="fg" style="margin-bottom:12px"><label>Subject</label><input class="fc" id="qEmailSubj"/></div>
-    <div class="fg"><label>Message</label><textarea class="fc" id="qEmailBody" rows="6"></textarea></div>
+    <div class="fg"><label>Message Body</label><textarea class="fc" id="qEmailBody" rows="8"></textarea></div>
   </div>
-  <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mQEmail')">Cancel</button><button class="btn btn-primary" onclick="sendQuoteEmail()">📧 Open in Email</button></div>
+  <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mQEmail')">Cancel</button><button class="btn btn-primary" onclick="sendQuoteEmail()">📧 Open Quote + Email</button></div>
 </div></div>
 
 <!-- CPO View Modal -->
@@ -1139,10 +1140,12 @@ const ini=company.owner.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(
 logA('⚙️','Company updated: '+company.name);closeModal('mCompany');}
 
 // ── SEQUENTIAL NUMBERING ──────────────────────────────────
-let seqCounters={INV:0,CPO:0,SPO:0};
+let seqCounters={INV:0,CPO:0,SPO:0,QT:0};
 const yr=new Date().getFullYear();
 function nextNum(prefix){seqCounters[prefix]++;return prefix+'-'+yr+'-'+String(seqCounters[prefix]).padStart(3,'0');}
 function peekNum(prefix){return prefix+'-'+yr+'-'+String(seqCounters[prefix]+1).padStart(3,'0');}
+function nextQNum(){seqCounters.QT++;return String(seqCounters.QT).padStart(3,'0');}
+function peekQNum(){return String(seqCounters.QT+1).padStart(3,'0');}
 function updateNumPreviews(){
   const ip=document.getElementById('invPrefix').value||'INV';
   const cp=document.getElementById('cpoPrefix').value||'CPO';
@@ -1575,7 +1578,7 @@ let qLI=0;
 
 function openNewQuote(){
   editingQId=null;qLI=0;
-  const num=peekNum('QT');
+  const num=peekQNum();
   document.getElementById('mQuoteTitle').textContent='New Quotation';
   document.getElementById('qN').value=num;
   document.getElementById('qDt').value=today();
@@ -1633,8 +1636,12 @@ function calcQTotals(){
     const idx=row.id.replace('qRow','');
     sub+=+document.getElementById('qTotal'+idx).value||0;
   });
-  document.getElementById('qMS').textContent=fmt(sub);
-  document.getElementById('qMT').textContent=fmt(sub);
+  const vatEx=+(sub/1.12).toFixed(2);
+  const vatAmt=+(vatEx*0.12).toFixed(2);
+  const vatInc=+(vatEx+vatAmt).toFixed(2);
+  document.getElementById('qMS').textContent=fmt(vatEx);
+  document.getElementById('qMVat').textContent=fmt(vatAmt);
+  document.getElementById('qMT').textContent=fmt(vatInc);
 }
 
 function removeQLine(idx){
@@ -1660,11 +1667,14 @@ function getQLines(){
 }
 
 function saveQuote(){
-  const num=document.getElementById('qN').value.trim();
   const client=document.getElementById('qCl').value.trim();
-  if(!num||!client){alert('Quote number and client name are required.');return;}
+  if(!client){alert('Client name is required.');return;}
   const lines=getQLines();
-  const total=lines.reduce((a,l)=>a+l.total,0);
+  const vatEx=+(lines.reduce((a,l)=>a+l.total,0)/1.12).toFixed(2);
+  const vatAmt=+(vatEx*0.12).toFixed(2);
+  const vatInc=+(vatEx+vatAmt).toFixed(2);
+  const isNew=!editingQId;
+  const num=isNew?nextQNum():document.getElementById('qN').value.trim();
   const q={
     id:editingQId||qId++,
     num,
@@ -1675,7 +1685,8 @@ function saveQuote(){
     remarks:document.getElementById('qRem').value,
     status:document.getElementById('qSt').value,
     lines,
-    total
+    total:vatInc,
+    vatEx,vatAmt,vatInc
   };
   if(editingQId){quotations=quotations.map(x=>x.id===editingQId?q:x);editingQId=null;}
   else quotations.push(q);
@@ -1748,31 +1759,115 @@ function convertQuoteToCPO(id){
   logA('🔄',`Quote ${q.num} converted to CPO for ${q.client}`);
 }
 
+// Shared quote HTML builder — used by both print and email popup
+function buildQuoteHTML(q){
+  const vatEx=q.vatEx||+(q.total/1.12).toFixed(2);
+  const vatAmt=q.vatAmt||+(vatEx*0.12).toFixed(2);
+  const vatInc=q.vatInc||q.total;
+  const ALPHATEC_ADDR='Unit 305 Brain Train Center Sta Rosa Business Park, Greenfield City, Don Jose, Sta Rosa City, Laguna 4026';
+  const addr=company.addr||ALPHATEC_ADDR;
+  const lineRows=(q.lines||[]).map((l,i)=>`<tr>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#374151">${i+1}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#1e293b">${l.desc}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:center;color:#64748b">${l.unit||'pcs'}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right">${l.qty}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right">${fmt(l.up)}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right;font-weight:600;color:#1e293b">${fmt(l.total)}</td>
+  </tr>`).join('');
+  // Alphatec logo block — navy block with "A" + company name
+  const logoBlock=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+    <div style="width:48px;height:48px;background:linear-gradient(135deg,#1e40af,#0d9488);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900;flex-shrink:0">A</div>
+    <div>
+      <div style="font-size:1.15rem;font-weight:800;color:#1e293b;letter-spacing:-.3px">${company.name||'Alphatec Trading OPC'}</div>
+      <div style="font-size:.72rem;color:#64748b;margin-top:1px">${company.tagline||'HVAC & Refrigeration Solutions'}</div>
+    </div>
+  </div>
+  <div style="font-size:.72rem;color:#64748b;line-height:1.6;padding-left:60px">
+    📍 ${addr}<br>
+    ${company.email?`✉ ${company.email}`:''}${company.phone?` &nbsp;·&nbsp; 📞 ${company.phone}`:''}
+  </div>`;
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quotation ${q.num}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px}
+    .wrap{max-width:760px;margin:0 auto}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #1e40af}
+    .meta{text-align:right}
+    .meta h3{font-size:.78rem;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+    .meta .qnum{font-size:1.4rem;font-weight:800;color:#1e293b;letter-spacing:-0.5px}
+    .meta p{font-size:.75rem;color:#64748b;margin-top:3px}
+    .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;padding:14px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+    .party h4{font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+    .party p{font-size:.85rem;color:#374151;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:0}
+    thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}
+    .totals{background:#f8fafc;border-radius:8px;padding:14px 16px;margin-top:0;border:1px solid #e2e8f0;margin-bottom:16px}
+    .t-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem;color:#475569;border-bottom:1px solid #f1f5f9}
+    .t-row:last-child{border-bottom:none}
+    .t-grand{font-size:1rem;font-weight:800;color:#1d4ed8;padding-top:10px;margin-top:4px}
+    .remarks{background:#f0fdf4;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bbf7d0;margin-bottom:14px}
+    .accept{background:#eff6ff;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bfdbfe;margin-bottom:14px}
+    .footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:14px;border-top:1px solid #e2e8f0}
+    @media print{body{padding:20px}}
+  </style></head><body>
+  <div class="wrap">
+    <div class="hdr">
+      <div>${logoBlock}</div>
+      <div class="meta">
+        <h3>Quotation</h3>
+        <div class="qnum">${q.num}</div>
+        <p>Date: <strong>${q.date}</strong></p>
+        <p>Valid Until: <strong>${q.validUntil||'30 days from date'}</strong></p>
+        <p>Terms: <strong>${q.terms}</strong></p>
+      </div>
+    </div>
+    <div class="parties">
+      <div class="party"><h4>Prepared For</h4><p style="font-weight:700;font-size:.95rem">${q.client}</p></div>
+      <div class="party"><h4>Prepared By</h4><p style="font-weight:700">${company.name||'Alphatec Trading OPC'}</p><p>${company.email||''}</p></div>
+    </div>
+    <table>
+      <thead><tr><th style="width:36px">#</th><th>Description</th><th style="text-align:center;width:60px">Unit</th><th style="text-align:right;width:60px">Qty</th><th style="text-align:right;width:110px">Unit Price</th><th style="text-align:right;width:120px">Amount</th></tr></thead>
+      <tbody>${lineRows}</tbody>
+    </table>
+    <div class="totals">
+      <div class="t-row"><span>VAT Exclusive Amount</span><span>${fmt(vatEx)}</span></div>
+      <div class="t-row"><span>VAT Amount (12%)</span><span style="color:#d97706">${fmt(vatAmt)}</span></div>
+      <div class="t-row t-grand"><span>TOTAL (VAT Inclusive)</span><span style="color:#16a34a">${fmt(vatInc)}</span></div>
+    </div>
+    ${q.remarks?`<div class="remarks"><strong>Remarks / Scope:</strong> ${q.remarks}</div>`:''}
+    <div class="accept">
+      To accept this quotation, please issue a Purchase Order referencing <strong>${q.num}</strong>.
+      ${company.email?` Contact us at <strong>${company.email}</strong>.`:''}
+    </div>
+    <div class="footer">Thank you for the opportunity! &nbsp;·&nbsp; ${company.name||'Alphatec Trading OPC'} &nbsp;·&nbsp; ${company.tagline||'HVAC & Refrigeration Solutions'}</div>
+  </div></body></html>`;
+}
+
 function openQuoteEmail(id){
   const q=quotations.find(x=>x.id===id);if(!q)return;
   document.getElementById('qEmailTo').value='';
-  document.getElementById('qEmailSubj').value=`Quotation ${q.num} — ${company.name}`;
-  const lineText=(q.lines||[]).map((l,i)=>`  ${i+1}. ${l.desc} — Qty: ${l.qty} ${l.unit} @ ${fmt(l.up)} = ${fmt(l.total)}`).join('\n');
+  document.getElementById('qEmailSubj').value=`Quotation ${q.num} — ${company.name||'Alphatec Trading OPC'}`;
   document.getElementById('qEmailBody').value=
 `Dear ${q.client},
 
-Please find below our quotation for your reference.
+Please find our quotation attached for your reference.
 
 Quotation No: ${q.num}
 Date: ${q.date}
 Valid Until: ${q.validUntil||'30 days from date'}
 Payment Terms: ${q.terms}
+Total Amount (VAT Inclusive): ${fmt(q.vatInc||q.total)}
 
-${lineText}
+To view the full formatted quotation with itemized details, please click the link below or open the attached file.
 
-TOTAL AMOUNT: ${fmt(q.total)}
-
-${q.remarks?q.remarks+'\n\n':''}Kindly send your Purchase Order to proceed.
+Kindly send your Purchase Order to proceed. We look forward to your confirmation.
 
 Best regards,
-${company.owner||company.name}
-${company.name}
-${company.email||''}${company.phone?' | '+company.phone:''}`;
+${company.owner||company.name||'Alphatec Trading OPC'}
+${company.name||'Alphatec Trading OPC'}
+${company.email||''}${company.phone?' | '+company.phone:''}
+Unit 305 Brain Train Center Sta Rosa Business Park, Greenfield City, Don Jose, Sta Rosa City, Laguna 4026`;
+  window._pendingQuoteEmailId=id;
   openModal('mQEmail');
 }
 
@@ -1781,45 +1876,32 @@ function sendQuoteEmail(){
   const subj=encodeURIComponent(document.getElementById('qEmailSubj').value);
   const body=encodeURIComponent(document.getElementById('qEmailBody').value);
   if(!to){alert('Please enter the client email address.');return;}
-  window.open(`mailto:${to}?subject=${subj}&body=${body}`,'_blank');
+  // Open formatted quote in new window first so user can print/save as PDF to attach
+  const qId2=window._pendingQuoteEmailId;
+  if(qId2){
+    const q=quotations.find(x=>x.id===qId2);
+    if(q){
+      const win=window.open('','_blank','width=860,height=780');
+      if(win){
+        win.document.write(buildQuoteHTML(q));
+        win.document.close();
+        win.focus();
+      }
+    }
+  }
+  // Open email client
+  setTimeout(()=>{window.open(`mailto:${to}?subject=${subj}&body=${body}`,'_blank');},400);
   closeModal('mQEmail');
 }
 
 function printQuote(id){
   const q=quotations.find(x=>x.id===id);if(!q)return;
-  const lineRows=(q.lines||[]).map((l,i)=>`<tr>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">${i+1}</td>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">${l.desc}</td>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center">${l.unit||'pcs'}</td>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">${l.qty}</td>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">${fmt(l.up)}</td>
-    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${fmt(l.total)}</td>
-  </tr>`).join('');
-  document.getElementById('printDocContent').innerHTML=`
-    <div class="print-doc">
-      <div class="doc-header">
-        <div class="doc-company"><h2>${company.icon} ${company.name}</h2><p>${company.tagline}</p><p style="margin-top:4px;font-size:.75rem">${company.addr}</p><p style="font-size:.75rem">${company.email}${company.phone?' · '+company.phone:''}</p></div>
-        <div class="doc-meta"><h3 style="color:#16a34a">QUOTATION</h3><p style="font-size:1rem;font-weight:700;color:#1e293b">${q.num}</p><p>Date: ${q.date}</p><p>Valid Until: ${q.validUntil||'30 days'}</p><p>Terms: ${q.terms}</p></div>
-      </div>
-      <div class="doc-parties">
-        <div class="doc-party"><h4>Prepared For</h4><p style="font-weight:700;font-size:.95rem">${q.client}</p></div>
-        <div class="doc-party"><h4>Prepared By</h4><p style="font-weight:700">${company.name}</p><p>${company.email||''}</p></div>
-      </div>
-      <table class="doc-table">
-        <thead><tr><th style="width:36px">#</th><th>Description</th><th style="text-align:center;width:60px">Unit</th><th style="text-align:right;width:60px">Qty</th><th style="text-align:right;width:110px">Unit Price</th><th style="text-align:right;width:120px">Total</th></tr></thead>
-        <tbody>${lineRows}</tbody>
-      </table>
-      <div class="doc-total-box">
-        <div class="total-row grand"><span>TOTAL QUOTED AMOUNT</span><span style="color:#16a34a">${fmt(q.total)}</span></div>
-      </div>
-      ${q.remarks?`<div style="background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.78rem;border:1px solid #bbf7d0"><strong>Remarks / Terms:</strong> ${q.remarks}</div>`:''}
-      <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.78rem">
-        To accept this quotation, please issue a Purchase Order referencing <strong>${q.num}</strong>.
-        ${company.email?`<br>Contact us at: ${company.email}`:''}
-      </div>
-      <div class="doc-footer">Thank you for the opportunity! · ${company.name} · ${company.tagline}</div>
-    </div>`;
-  document.getElementById('printDocWrap').style.display='flex';
+  const win=window.open('','_blank','width=860,height=780');
+  if(!win){alert('Please allow popups for this site to print.');return;}
+  win.document.write(buildQuoteHTML(q));
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{win.print();},500);
 }
 
 function renderQuotes(){
