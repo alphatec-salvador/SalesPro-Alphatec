@@ -259,6 +259,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="nav-section">
     <div class="nav-label">Sales</div>
     <div class="nav-item" data-roles="admin,sales" onclick="nav('leads',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🎯</span>Lead Monitor<span class="nb nb-blue" id="nbL">5</span></div>
+    <div class="nav-item" data-roles="admin,sales,operations" onclick="nav('quotations',this)"><span class="icon" style="width:20px;height:20px;background:#f0fdf4;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📝</span>Quotations<span class="nb nb-green" id="nbQ">0</span></div>
     <div class="nav-item" data-roles="admin,operations,finance,sales" onclick="nav('clientpo',this)"><span class="icon" style="width:20px;height:20px;background:#eff6ff;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📋</span>Client POs<span class="nb nb-blue" id="nbC">6</span></div>
     <div class="nav-item" data-roles="admin,operations,finance,sales" onclick="nav('invoices',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🧾</span>Invoices<span class="nb nb-amber" id="nbI">6</span></div>
   </div>
@@ -632,6 +633,17 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Lead / Company</th><th>Stage</th><th>Deal Value</th><th>Owner</th><th>Last Contact</th><th>Next Action</th><th>Linked CPO</th><th>Status</th><th></th></tr></thead><tbody id="leadsTbl"></tbody></table></div></div>
 </div>
 
+<!-- QUOTATIONS -->
+<div class="page" id="pg-quotations">
+  <div class="ph"><div><h2>Quotations</h2><p>Create & send quotes to clients · Convert approved quotes to Client PO in one click</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('quotations')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openNewQuote()">+ New Quotation</button></div></div>
+  <div class="toolbar"><input type="text" placeholder="🔍 Search..." id="qSrch" oninput="renderQuotes()"/><select id="qStF" onchange="renderQuotes()"><option value="">All Status</option><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option><option>Converted</option></select></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>Quote #</th><th>Client</th><th>Date</th><th>Valid Until</th><th>Items</th><th>Total Amount</th><th>Terms</th><th>Status</th><th></th></tr></thead>
+    <tbody id="quoteTbl"></tbody>
+    <tfoot><tr><td colspan="5">TOTAL</td><td id="qFT">₱0</td><td colspan="3"></td></tr></tfoot>
+  </table></div></div>
+</div>
+
 <!-- CLIENT PO -->
 <div class="page" id="pg-clientpo">
   <div class="ph"><div><h2>Client Purchase Orders</h2><p>Catalog auto-fills prices · Multiple Supplier POs per CPO · Job GP tracking</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('clientpo')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openNewCPO()">+ New Client PO</button></div></div>
@@ -793,6 +805,46 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
     <div id="printDocContent" style="padding:0"></div>
   </div>
 </div>
+
+<!-- QUOTATION Modal -->
+<div class="modal-overlay" id="mQuote"><div class="modal" style="width:820px">
+  <div class="mh"><div><h3 id="mQuoteTitle">New Quotation</h3><p>Create a client quotation with line items</p></div><button class="mc" onclick="closeModal('mQuote')">✕</button></div>
+  <div class="mb">
+    <div class="g3" style="margin-bottom:12px">
+      <div class="fg"><label>Quote #</label><input class="fc" id="qN" placeholder="QT-2026-001"/></div>
+      <div class="fg"><label>Date</label><input class="fc" type="date" id="qDt"/></div>
+      <div class="fg"><label>Valid Until</label><input class="fc" type="date" id="qVal"/></div>
+    </div>
+    <div class="g2" style="margin-bottom:12px">
+      <div class="fg"><label>Client Name</label><input class="fc" id="qCl" placeholder="Client company name" list="dlClientsQ"/><datalist id="dlClientsQ"></datalist></div>
+      <div class="fg"><label>Payment Terms</label><select class="fc" id="qTm"><option>Full Payment</option><option>30 Days</option><option>60 Days</option><option>Upon Delivery</option><option>50% DP, 50% Balance</option><option>Custom</option></select></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label>Remarks / Scope of Work</label><textarea class="fc" id="qRem" rows="2" placeholder="e.g. Prices valid for 30 days. Delivery within 2 weeks upon receipt of PO."></textarea></div>
+    <hr class="divider"/>
+    <div style="font-size:.78rem;font-weight:700;color:#374151;margin-bottom:8px">Line Items</div>
+    <div class="li-grid li-head"><span>Product / Service</span><span>Unit</span><span style="text-align:right">Qty</span><span style="text-align:right">Unit Price</span><span style="text-align:right">Total</span><span></span></div>
+    <div id="qLines"></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addQLine()">+ Add Line</button>
+    <div style="display:flex;justify-content:flex-end;gap:24px;margin-top:14px;background:#f8fafc;border-radius:8px;padding:12px 16px;font-size:.85rem">
+      <span>Subtotal: <strong id="qMS">₱0</strong></span>
+      <span style="color:#1d4ed8;font-weight:700;font-size:.95rem">TOTAL: <strong id="qMT">₱0</strong></span>
+    </div>
+    <div class="fg" style="margin-top:10px"><label>Status</label><select class="fc" id="qSt"><option>Draft</option><option>Sent</option><option>Approved</option><option>Rejected</option></select></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mQuote')">Cancel</button><button class="btn btn-primary" onclick="saveQuote()">💾 Save Quotation</button></div>
+</div></div>
+
+<!-- QUOTATION Email Modal -->
+<div class="modal-overlay" id="mQEmail"><div class="modal" style="width:560px">
+  <div class="mh"><div><h3>📧 Email Quotation</h3><p>Send quote directly to client</p></div><button class="mc" onclick="closeModal('mQEmail')">✕</button></div>
+  <div class="mb">
+    <div class="alert ai" style="margin-bottom:14px">💡 This will open your default email app pre-filled with the quotation details.</div>
+    <div class="fg" style="margin-bottom:12px"><label>To (Client Email)</label><input class="fc" id="qEmailTo" placeholder="client@email.com"/></div>
+    <div class="fg" style="margin-bottom:12px"><label>Subject</label><input class="fc" id="qEmailSubj"/></div>
+    <div class="fg"><label>Message</label><textarea class="fc" id="qEmailBody" rows="6"></textarea></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mQEmail')">Cancel</button><button class="btn btn-primary" onclick="sendQuoteEmail()">📧 Open in Email</button></div>
+</div></div>
 
 <!-- CPO View Modal -->
 <div class="modal-overlay" id="mViewCPO"><div class="modal" style="width:820px">
@@ -1271,7 +1323,7 @@ function nav(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('pg-'+id).classList.add('active');el.classList.add('active');
-  ({dashboard:refreshDash,catalog:()=>{renderCatalog();},leads:renderLeads,clientpo:renderCPO,invoices:()=>{fillInvPOSel();renderInv();},supplierpo:()=>{fillSPOLinked();renderSPO();},ar:()=>{fillARSel();renderAR();renderARCh();},ap:()=>{fillAPSel();renderAP();renderAPCh();},expenses:()=>{renderExp();renderExpCh();},financials:renderFinancials,settings:()=>{updateAgingPreview();renderCatSettingsTbl();updateNumPreviews();}})[id]?.();
+  ({dashboard:refreshDash,catalog:()=>{renderCatalog();},leads:renderLeads,quotations:renderQuotes,clientpo:renderCPO,invoices:()=>{fillInvPOSel();renderInv();},supplierpo:()=>{fillSPOLinked();renderSPO();},ar:()=>{fillARSel();renderAR();renderARCh();},ap:()=>{fillAPSel();renderAP();renderAPCh();},expenses:()=>{renderExp();renderExpCh();},financials:renderFinancials,settings:()=>{updateAgingPreview();renderCatSettingsTbl();updateNumPreviews();}})[id]?.();
 }
 function fsTab(id,el){document.querySelectorAll('.fs-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.fs-page').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('fs-'+id).classList.add('active');if(id==='ch')renderFSCharts();}
 
@@ -1359,23 +1411,62 @@ function printInvoice(invId){
 }
 function printSupplierPO(spoId){
   const spo=supplierPOs.find(s=>s.id===spoId);if(!spo)return;
+  // Build line items rows — use spo.lines if available, else show summary row
+  let lineRows='';
+  let subtotal=0;
+  if(spo.lines&&spo.lines.length){
+    lineRows=spo.lines.map((l,i)=>{
+      const desc=l.desc||l.description||`Item ${i+1}`;
+      const qty=+l.qty||1;
+      const up=+l.unitCost||+l.pc||+l.up||0;
+      const total=+l.total||+(qty*up).toFixed(2);
+      subtotal+=total;
+      return`<tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem">${i+1}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem">${desc}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:center">${l.unit||'pc'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right">${qty}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right">${fmt(up)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right;font-weight:600">${fmt(total)}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    subtotal=spo.total||0;
+    lineRows=`<tr>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">1</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">Materials & Services per ${spo.num}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center">lot</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">1</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">${fmt(subtotal)}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${fmt(subtotal)}</td>
+    </tr>`;
+  }
   document.getElementById('printDocContent').innerHTML=`
     <div class="print-doc">
       <div class="doc-header">
         <div class="doc-company"><h2>${company.icon} ${company.name}</h2><p>${company.tagline}</p><p style="margin-top:4px;font-size:.75rem">${company.addr}</p><p style="font-size:.75rem">${company.email}</p></div>
-        <div class="doc-meta"><h3 style="color:#d97706">PURCHASE ORDER</h3><p style="font-size:1rem;font-weight:700;color:#1e293b">${spo.num}</p><p>Date: ${spo.date}</p><p>Delivery: ${spo.delivery||'TBD'}</p></div>
+        <div class="doc-meta"><h3 style="color:#d97706">PURCHASE ORDER</h3><p style="font-size:1rem;font-weight:700;color:#1e293b">${spo.num}</p><p>Date: ${spo.date}</p><p>Delivery: ${spo.delivery||'TBD'}</p><p>Terms: ${spo.terms||'—'}</p></div>
       </div>
       <div class="doc-parties">
         <div class="doc-party"><h4>Supplier</h4><p style="font-weight:700;font-size:.95rem">${spo.supplier}</p></div>
-        <div class="doc-party"><h4>Reference</h4><p>Linked CPO: <strong>${spo.linked||'—'}</strong></p><p>Status: <strong>${spo.status}</strong></p></div>
+        <div class="doc-party"><h4>Reference</h4><p>Linked CPO: <strong>${spo.linked||'—'}</strong></p><p>Status: <strong>${spo.status}</strong></p>${spo.due?`<p>Due Date: <strong>${spo.due}</strong></p>`:''}</div>
       </div>
-      <table class="doc-table"><thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody><tr><td>Materials & Services per ${spo.num}</td><td style="text-align:right">${fmt(spo.total)}</td></tr></tbody></table>
+      <table class="doc-table">
+        <thead><tr>
+          <th style="width:36px">#</th>
+          <th>Description</th>
+          <th style="text-align:center;width:60px">Unit</th>
+          <th style="text-align:right;width:60px">Qty</th>
+          <th style="text-align:right;width:110px">Unit Cost</th>
+          <th style="text-align:right;width:120px">Total</th>
+        </tr></thead>
+        <tbody>${lineRows}</tbody>
+      </table>
       <div class="doc-total-box">
-        <div class="total-row grand"><span>TOTAL PO VALUE</span><span>${fmt(spo.total)}</span></div>
+        <div class="total-row grand"><span>TOTAL PO VALUE</span><span>${fmt(spo.total||subtotal)}</span></div>
       </div>
       <div style="background:#fffbeb;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.78rem;border:1px solid #fed7aa">
-        <strong>Authorized by:</strong> ${company.owner} · ${company.name}<br>
+        <strong>Authorized by:</strong> ${company.owner||company.name} · ${company.name}<br>
         Please deliver to: ${company.addr}
       </div>
       <div class="doc-footer">${company.name} · ${company.email} · ${company.tagline}</div>
@@ -1474,6 +1565,288 @@ function renderExpCh(){
   if(expCh[2])expCh[2].destroy();expCh[2]=new Chart(document.getElementById('cE3'),{type:'bar',data:{labels:CATS.map(c=>c.icon+' '+c.name.split('&')[0].trim()),datasets:[{label:'Actual',data:ac,backgroundColor:ac.map((a,i)=>a>bg2[i]?'#ef444488':'#3b82f688'),borderRadius:4},{label:'Budget',data:bg2,backgroundColor:'#94a3b820',borderRadius:4,borderWidth:1,borderColor:'#94a3b8'}]},options:{plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
   const apv=expenses.filter(e=>e.status==='Approved').reduce((a,e)=>a+e.amount,0),pnv=expenses.filter(e=>e.status==='Pending').reduce((a,e)=>a+e.amount,0),rjv=expenses.filter(e=>e.status==='Rejected').reduce((a,e)=>a+e.amount,0);
   if(expCh[3])expCh[3].destroy();expCh[3]=new Chart(document.getElementById('cE4'),{type:'pie',data:{labels:['Approved','Pending','Rejected'],datasets:[{data:[apv,pnv,rjv],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#374151',padding:8}}}}});
+}
+
+// ── QUOTATIONS ────────────────────────────────────────────
+let quotations=[];
+let qId=1;
+let editingQId=null;
+let qLI=0;
+
+function openNewQuote(){
+  editingQId=null;qLI=0;
+  const num=peekNum('QT');
+  document.getElementById('mQuoteTitle').textContent='New Quotation';
+  document.getElementById('qN').value=num;
+  document.getElementById('qDt').value=today();
+  const valDate=new Date();valDate.setDate(valDate.getDate()+30);
+  document.getElementById('qVal').value=valDate.toISOString().slice(0,10);
+  document.getElementById('qCl').value='';
+  document.getElementById('qTm').value='Full Payment';
+  document.getElementById('qRem').value='';
+  document.getElementById('qSt').value='Draft';
+  document.getElementById('qLines').innerHTML='';
+  // Populate client datalist
+  const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+  document.getElementById('dlClientsQ').innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+  ['qMS','qMT'].forEach(id=>document.getElementById(id).textContent='₱0');
+  addQLine();
+  openModal('mQuote');
+}
+
+function addQLine(){
+  const idx=qLI++;
+  const row=document.createElement('div');
+  row.className='li-grid li-body';
+  row.id='qRow'+idx;
+  row.innerHTML=`
+    <select class="fc" style="font-size:.75rem" onchange="qAutoFill(${idx},this)">
+      <option value="">— Select or type below —</option>
+      ${catalog.map(c=>`<option value="${c.id}" data-sp="${c.sp}" data-desc="${c.desc}" data-unit="${c.unit}">${c.code} — ${c.desc}</option>`).join('')}
+    </select>
+    <input class="fc" id="qUnit${idx}" style="font-size:.75rem" value="pcs"/>
+    <input class="fc" id="qQty${idx}" type="number" value="1" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
+    <input class="fc" id="qUP${idx}" type="number" value="0" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
+    <input class="fc" id="qTotal${idx}" type="number" value="0" readonly style="text-align:right;font-size:.75rem;background:#f0fdf4;font-weight:600"/>
+    <button class="btn btn-danger" style="padding:4px 8px" onclick="removeQLine(${idx})">✕</button>`;
+  document.getElementById('qLines').appendChild(row);
+}
+
+function qAutoFill(idx,sel){
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.value)return;
+  document.getElementById('qUP'+idx).value=opt.dataset.sp||0;
+  document.getElementById('qUnit'+idx).value=opt.dataset.unit||'pcs';
+  calcQLine(idx);
+}
+
+function calcQLine(idx){
+  const qty=+document.getElementById('qQty'+idx).value||0;
+  const up=+document.getElementById('qUP'+idx).value||0;
+  document.getElementById('qTotal'+idx).value=(qty*up).toFixed(2);
+  calcQTotals();
+}
+
+function calcQTotals(){
+  let sub=0;
+  document.querySelectorAll('#qLines .li-body').forEach(row=>{
+    const idx=row.id.replace('qRow','');
+    sub+=+document.getElementById('qTotal'+idx).value||0;
+  });
+  document.getElementById('qMS').textContent=fmt(sub);
+  document.getElementById('qMT').textContent=fmt(sub);
+}
+
+function removeQLine(idx){
+  const row=document.getElementById('qRow'+idx);
+  if(row)row.remove();
+  calcQTotals();
+}
+
+function getQLines(){
+  const lines=[];
+  document.querySelectorAll('#qLines .li-body').forEach(row=>{
+    const idx=row.id.replace('qRow','');
+    const sel=row.querySelector('select');
+    const catItem=sel&&sel.value?catalog.find(c=>c.id===+sel.value):null;
+    const desc=catItem?catItem.desc:(sel&&sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'Item');
+    const qty=+document.getElementById('qQty'+idx).value||0;
+    const up=+document.getElementById('qUP'+idx).value||0;
+    const total=+document.getElementById('qTotal'+idx).value||0;
+    const unit=document.getElementById('qUnit'+idx).value||'pcs';
+    if(qty>0||up>0)lines.push({desc,unit,qty,up,total,catId:catItem?catItem.id:null});
+  });
+  return lines;
+}
+
+function saveQuote(){
+  const num=document.getElementById('qN').value.trim();
+  const client=document.getElementById('qCl').value.trim();
+  if(!num||!client){alert('Quote number and client name are required.');return;}
+  const lines=getQLines();
+  const total=lines.reduce((a,l)=>a+l.total,0);
+  const q={
+    id:editingQId||qId++,
+    num,
+    date:document.getElementById('qDt').value,
+    validUntil:document.getElementById('qVal').value,
+    client,
+    terms:document.getElementById('qTm').value,
+    remarks:document.getElementById('qRem').value,
+    status:document.getElementById('qSt').value,
+    lines,
+    total
+  };
+  if(editingQId){quotations=quotations.map(x=>x.id===editingQId?q:x);editingQId=null;}
+  else quotations.push(q);
+  logA('📝',`Quotation ${num} — ${client} — ${fmt(total)}`);
+  closeModal('mQuote');
+  renderQuotes();
+  updateBadges();
+}
+
+function editQuote(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  editingQId=id;qLI=0;
+  document.getElementById('mQuoteTitle').textContent='Edit Quotation';
+  document.getElementById('qN').value=q.num;
+  document.getElementById('qDt').value=q.date;
+  document.getElementById('qVal').value=q.validUntil||'';
+  document.getElementById('qCl').value=q.client;
+  document.getElementById('qTm').value=q.terms||'Full Payment';
+  document.getElementById('qRem').value=q.remarks||'';
+  document.getElementById('qSt').value=q.status||'Draft';
+  document.getElementById('qLines').innerHTML='';
+  const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+  document.getElementById('dlClientsQ').innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+  (q.lines||[]).forEach(l=>{
+    addQLine();
+    const idx=qLI-1;
+    document.getElementById('qUnit'+idx).value=l.unit||'pcs';
+    document.getElementById('qQty'+idx).value=l.qty||1;
+    document.getElementById('qUP'+idx).value=l.up||0;
+    document.getElementById('qTotal'+idx).value=l.total||0;
+  });
+  if(!q.lines||!q.lines.length)addQLine();
+  calcQTotals();
+  openModal('mQuote');
+}
+
+function deleteQuote(id){if(!confirm('Delete this quotation?'))return;quotations=quotations.filter(x=>x.id!==id);renderQuotes();updateBadges();}
+
+function convertQuoteToCPO(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  if(!confirm(`Convert ${q.num} to a Client PO for ${q.client}?`))return;
+  // Build CPO from quote
+  window._cpoEditId=null;
+  initCL();
+  const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
+  document.getElementById('cN').value=num;
+  document.getElementById('cDt').value=today();
+  document.getElementById('cCl').value=q.client;
+  document.getElementById('cSt').value='Received';
+  document.getElementById('cTm').value=q.terms||'Full Payment';
+  document.querySelector('#mCPO .mh h3').textContent='New Client PO (from '+q.num+')';
+  // Clear auto-added line and rebuild from quote lines
+  document.getElementById('cLines').innerHTML='';cLI=0;
+  (q.lines||[]).forEach(l=>{
+    addCLine();
+    const idx=cLI-1;
+    const descEl=document.getElementById('cDesc'+idx);
+    const qtyEl=document.getElementById('cQty'+idx);
+    const upEl=document.getElementById('cUP'+idx);
+    if(descEl)descEl.value=l.desc||'';
+    if(qtyEl)qtyEl.value=l.qty||1;
+    if(upEl){upEl.value=l.up||0;calcCLine(idx);}
+  });
+  if(!q.lines||!q.lines.length)addCLine();
+  calcCTotals();
+  // Mark quote as converted
+  q.status='Converted';
+  renderQuotes();
+  openModal('mCPO');
+  logA('🔄',`Quote ${q.num} converted to CPO for ${q.client}`);
+}
+
+function openQuoteEmail(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  document.getElementById('qEmailTo').value='';
+  document.getElementById('qEmailSubj').value=`Quotation ${q.num} — ${company.name}`;
+  const lineText=(q.lines||[]).map((l,i)=>`  ${i+1}. ${l.desc} — Qty: ${l.qty} ${l.unit} @ ${fmt(l.up)} = ${fmt(l.total)}`).join('\n');
+  document.getElementById('qEmailBody').value=
+`Dear ${q.client},
+
+Please find below our quotation for your reference.
+
+Quotation No: ${q.num}
+Date: ${q.date}
+Valid Until: ${q.validUntil||'30 days from date'}
+Payment Terms: ${q.terms}
+
+${lineText}
+
+TOTAL AMOUNT: ${fmt(q.total)}
+
+${q.remarks?q.remarks+'\n\n':''}Kindly send your Purchase Order to proceed.
+
+Best regards,
+${company.owner||company.name}
+${company.name}
+${company.email||''}${company.phone?' | '+company.phone:''}`;
+  openModal('mQEmail');
+}
+
+function sendQuoteEmail(){
+  const to=document.getElementById('qEmailTo').value.trim();
+  const subj=encodeURIComponent(document.getElementById('qEmailSubj').value);
+  const body=encodeURIComponent(document.getElementById('qEmailBody').value);
+  if(!to){alert('Please enter the client email address.');return;}
+  window.open(`mailto:${to}?subject=${subj}&body=${body}`,'_blank');
+  closeModal('mQEmail');
+}
+
+function printQuote(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  const lineRows=(q.lines||[]).map((l,i)=>`<tr>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">${i+1}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">${l.desc}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center">${l.unit||'pcs'}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">${l.qty}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">${fmt(l.up)}</td>
+    <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${fmt(l.total)}</td>
+  </tr>`).join('');
+  document.getElementById('printDocContent').innerHTML=`
+    <div class="print-doc">
+      <div class="doc-header">
+        <div class="doc-company"><h2>${company.icon} ${company.name}</h2><p>${company.tagline}</p><p style="margin-top:4px;font-size:.75rem">${company.addr}</p><p style="font-size:.75rem">${company.email}${company.phone?' · '+company.phone:''}</p></div>
+        <div class="doc-meta"><h3 style="color:#16a34a">QUOTATION</h3><p style="font-size:1rem;font-weight:700;color:#1e293b">${q.num}</p><p>Date: ${q.date}</p><p>Valid Until: ${q.validUntil||'30 days'}</p><p>Terms: ${q.terms}</p></div>
+      </div>
+      <div class="doc-parties">
+        <div class="doc-party"><h4>Prepared For</h4><p style="font-weight:700;font-size:.95rem">${q.client}</p></div>
+        <div class="doc-party"><h4>Prepared By</h4><p style="font-weight:700">${company.name}</p><p>${company.email||''}</p></div>
+      </div>
+      <table class="doc-table">
+        <thead><tr><th style="width:36px">#</th><th>Description</th><th style="text-align:center;width:60px">Unit</th><th style="text-align:right;width:60px">Qty</th><th style="text-align:right;width:110px">Unit Price</th><th style="text-align:right;width:120px">Total</th></tr></thead>
+        <tbody>${lineRows}</tbody>
+      </table>
+      <div class="doc-total-box">
+        <div class="total-row grand"><span>TOTAL QUOTED AMOUNT</span><span style="color:#16a34a">${fmt(q.total)}</span></div>
+      </div>
+      ${q.remarks?`<div style="background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.78rem;border:1px solid #bbf7d0"><strong>Remarks / Terms:</strong> ${q.remarks}</div>`:''}
+      <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.78rem">
+        To accept this quotation, please issue a Purchase Order referencing <strong>${q.num}</strong>.
+        ${company.email?`<br>Contact us at: ${company.email}`:''}
+      </div>
+      <div class="doc-footer">Thank you for the opportunity! · ${company.name} · ${company.tagline}</div>
+    </div>`;
+  document.getElementById('printDocWrap').style.display='flex';
+}
+
+function renderQuotes(){
+  const s=(document.getElementById('qSrch')?.value||'').toLowerCase();
+  const sf=document.getElementById('qStF')?.value||'';
+  const f=quotations.filter(q=>(!s||(q.num+q.client).toLowerCase().includes(s))&&(!sf||q.status===sf));
+  const stC={Draft:'bgr',Sent:'bb',Approved:'bg',Rejected:'br',Converted:'bt'};
+  document.getElementById('quoteTbl').innerHTML=f.length?f.map(q=>`<tr>
+    <td style="font-weight:600;color:#16a34a;font-size:.78rem">${q.num}</td>
+    <td style="font-weight:600">${q.client}</td>
+    <td>${q.date||'—'}</td>
+    <td>${q.validUntil||'—'}</td>
+    <td style="font-size:.75rem;color:#64748b">${(q.lines||[]).length} item(s)</td>
+    <td style="font-weight:700;color:#1d4ed8">${fmt(q.total)}</td>
+    <td style="font-size:.75rem">${q.terms||'—'}</td>
+    <td><span class="badge ${stC[q.status]||'bgr'}">${q.status}</span></td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="editQuote(${q.id})">✏️</button>
+      <button class="btn btn-ghost btn-sm" onclick="printQuote(${q.id})">🖨️</button>
+      <button class="btn btn-ghost btn-sm" onclick="openQuoteEmail(${q.id})">📧</button>
+      ${q.status!=='Converted'?`<button class="btn btn-success btn-sm" onclick="convertQuoteToCPO(${q.id})" title="Convert to Client PO">→ CPO</button>`:'<span style="font-size:.72rem;color:#0d9488;font-weight:600">✓ Converted</span>'}
+      <button class="btn btn-danger" onclick="deleteQuote(${q.id})">✕</button>
+    </td>
+  </tr>`).join(''):`<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px">No quotations yet. Click "+ New Quotation" to start.</td></tr>`;
+  const total=f.reduce((a,q)=>a+q.total,0);
+  document.getElementById('qFT').textContent=fmt(total);
+  document.getElementById('nbQ').textContent=quotations.filter(q=>q.status==='Draft'||q.status==='Sent').length;
 }
 
 // ── CPO LINE ITEMS ────────────────────────────────────────
@@ -2351,7 +2724,7 @@ const ROLE_PERMISSIONS = {
   admin:      {nav:['dashboard','catalog','leads','clientpo','invoices','supplierpo','ar','ap','expenses','financials','settings'], canDelete:true,  canEdit:true},
   finance:    {nav:['dashboard','clientpo','invoices','supplierpo','ar','ap','expenses','financials'],                              canDelete:false, canEdit:true},
   operations: {nav:['dashboard','catalog','clientpo','invoices','supplierpo'],                                                      canDelete:false, canEdit:true},
-  sales:      {nav:['dashboard','catalog','leads','clientpo','invoices'],                                                           canDelete:false, canEdit:true},
+  sales:      {nav:['dashboard','catalog','leads','quotations','clientpo','invoices'],                                            canDelete:false, canEdit:true},
 };
 
 let currentUser=null, currentRole='admin';
