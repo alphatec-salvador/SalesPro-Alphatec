@@ -2628,14 +2628,15 @@ window.sbLoadAll=async function(){
   if(arRecords.length)idAR=Math.max(...arRecords.map(r=>r.id))+1;
   if(apRecords.length)idAP=Math.max(...apRecords.map(r=>r.id))+1;
   if(expenses.length)expId=Math.max(...expenses.map(r=>r.id))+1;
-  if(quotations.length){qId=Math.max(...quotations.map(r=>r.id))+1;seqCounters.QT=Math.max(...quotations.map(r=>extractSeq(r.num)));}
+  if(quotations.length)qId=Math.max(...quotations.map(r=>r.id))+1;
 
   // Sync seqCounters from highest existing document numbers
   // Extracts the trailing numeric part from e.g. "CPO-2026-007" → 7
   const extractSeq=num=>{if(!num)return 0;const m=num.match(/(\d+)$/);return m?+m[1]:0;};
   if(clientPOs.length)seqCounters['CPO']=Math.max(...clientPOs.map(r=>extractSeq(r.num)));
   if(supplierPOs.length)seqCounters['SPO']=Math.max(...supplierPOs.map(r=>extractSeq(r.num)));
-  if(invoices.length)seqCounters['INV']=Math.max(...invoices.map(r=>extractSeq(r.num)));
+  if(invoices.length)seqCounters["INV"]=Math.max(...invoices.map(r=>extractSeq(r.num)));
+  if(quotations.length)seqCounters.QT=Math.max(...quotations.map(r=>extractSeq(r.num)));
   // Also sync any custom prefixes found in existing records
   clientPOs.forEach(r=>{const p=r.num?.split('-')[0];if(p&&p!=='CPO'){const n=extractSeq(r.num);if(!seqCounters[p]||seqCounters[p]<n)seqCounters[p]=n;}});
   supplierPOs.forEach(r=>{const p=r.num?.split('-')[0];if(p&&p!=='SPO'){const n=extractSeq(r.num);if(!seqCounters[p]||seqCounters[p]<n)seqCounters[p]=n;}});
