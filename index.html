@@ -1504,7 +1504,7 @@ function printDocPopup(){
     .total-row.grand{font-size:1rem;font-weight:700;color:#1e293b;border-bottom:none;padding-top:10px;margin-top:4px}
     .doc-footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:8px}
     @media print{
-    body{padding:0;margin:1in 1in 1in 1in;font-size:12px}
+    body{padding:16px;font-size:12px}
     .hdr{page-break-inside:avoid}
     .parties{page-break-inside:avoid}
     .totals{page-break-inside:avoid}
@@ -1825,7 +1825,7 @@ function buildQuoteHTML(q){
     .remarks{background:#f0fdf4;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bbf7d0;margin-bottom:14px}
     .accept{background:#eff6ff;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bfdbfe;margin-bottom:14px}
     .footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:14px;border-top:1px solid #e2e8f0}
-    @media print{body{padding:0;margin:1in 1in 1in 1in;}}
+    @media print{body{padding:20px}}
   </style></head><body>
   <div class="wrap">
     <div class="hdr">
@@ -1874,13 +1874,13 @@ function buildQuoteHTML(q){
     <div style="margin-top:32px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:40px">
       <div style="border-top:1.5px solid #1e293b;padding-top:10px;text-align:center">
         <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Prepared by</div>
-        <div style="font-size:.78rem;color:#374151;margin-top:4px">${company.owner||'M. Salvador'}</div>
-        <div style="font-size:.7rem;color:#94a3b8">${company.name||'Alphatec Trading OPC'}</div>
+        <div style="font-size:.78rem;font-weight:600;color:#1e293b;margin-top:4px">Caren Parcia</div>
+        <div style="font-size:.7rem;color:#64748b">Sales Admin Staff</div>
       </div>
       <div style="border-top:1.5px solid #1e293b;padding-top:10px;text-align:center">
-        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Conforme / Authorized by</div>
-        <div style="font-size:.78rem;color:#374151;margin-top:4px">&nbsp;</div>
-        <div style="font-size:.7rem;color:#94a3b8">Client Signature over Printed Name</div>
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Approved by</div>
+        <div style="font-size:.78rem;font-weight:600;color:#1e293b;margin-top:4px">Mark Lester Salvador</div>
+        <div style="font-size:.7rem;color:#64748b">General Manager</div>
       </div>
     </div>
     <div class="footer">
