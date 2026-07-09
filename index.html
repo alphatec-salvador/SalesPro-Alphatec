@@ -1692,6 +1692,7 @@ function saveQuote(){
   if(editingQId){quotations=quotations.map(x=>x.id===editingQId?q:x);editingQId=null;}
   else quotations.push(q);
   logA('📝',`Quotation ${num} — ${client} — ${fmt(vatInc)}`);
+  if(window.sbSave)window.sbSave('quotations',{id:q.id,quote_number:q.num,client_name:q.client,date:q.date||null,valid_until:q.validUntil||null,terms:q.terms||'',remarks:q.remarks||'',status:q.status||'Draft',lines:JSON.stringify(q.lines||[]),total_amount:q.total||0,vat_ex:q.vatEx||0,vat_amt:q.vatAmt||0,vat_inc:q.vatInc||0});
   closeModal('mQuote');
   renderQuotes();
   updateBadges();
@@ -1724,7 +1725,7 @@ function editQuote(id){
   openModal('mQuote');
 }
 
-function deleteQuote(id){if(!confirm('Delete this quotation?'))return;quotations=quotations.filter(x=>x.id!==id);renderQuotes();updateBadges();}
+function deleteQuote(id){if(!confirm('Delete this quotation?'))return;quotations=quotations.filter(x=>x.id!==id);renderQuotes();updateBadges();if(window.sbDelete)window.sbDelete('quotations',id);}
 
 function convertQuoteToCPO(id){
   const q=quotations.find(x=>x.id===id);if(!q)return;
@@ -2612,6 +2613,7 @@ window.sbLoadAll=async function(){
   await loadInto('supplier_pos',supplierPOs,r=>({id:r.id,num:r.po_number,supplier:r.supplier_name,linked:r.linked_cpo||'',date:r.date||'',delivery:r.delivery||'',terms:r.terms||'Full Payment',due:r.due_date||'',status:r.status||'',lines:[{type:'product'}],total:+r.total_amount||0,paid:+r.paid||0,balance:+r.balance||0}));
   await loadInto('invoices',invoices,r=>({id:r.id,num:r.invoice_number,poRef:r.po_ref||'',client:r.client_name,date:r.date||'',due:r.due_date||'',terms:r.terms||'',amount:+r.total_amount||0,paid:+r.amount_paid||0,balance:(+r.total_amount||0)-(+r.amount_paid||0),status:r.status||''}));
   await loadInto('expenses',expenses,r=>({id:r.id,ref:r.ref,date:r.date||'',month:r.month||'',cat:r.category||'',desc:r.description||'',payee:r.payee||'',tin:r.tin_number||'',amount:+r.amount||0,vatable:+r.vatable_amount||0,vat:+r.vat_amount||0,vatExempt:+r.vat_exempt||0,mode:r.payment_mode||'',status:r.status||'Pending'}));
+  await loadInto('quotations',quotations,r=>({id:r.id,num:r.quote_number,client:r.client_name,date:r.date||'',validUntil:r.valid_until||'',terms:r.terms||'',remarks:r.remarks||'',status:r.status||'Draft',lines:typeof r.lines==='string'?JSON.parse(r.lines||'[]'):(r.lines||[]),total:+r.total_amount||0,vatEx:+r.vat_ex||0,vatAmt:+r.vat_amt||0,vatInc:+r.vat_inc||0}));
 
   // Rebuild derived arrays
   arRecords.splice(0,arRecords.length);
@@ -2626,6 +2628,7 @@ window.sbLoadAll=async function(){
   if(arRecords.length)idAR=Math.max(...arRecords.map(r=>r.id))+1;
   if(apRecords.length)idAP=Math.max(...apRecords.map(r=>r.id))+1;
   if(expenses.length)expId=Math.max(...expenses.map(r=>r.id))+1;
+  if(quotations.length){qId=Math.max(...quotations.map(r=>r.id))+1;seqCounters.QT=Math.max(...quotations.map(r=>extractSeq(r.num)));}
 
   // Sync seqCounters from highest existing document numbers
   // Extracts the trailing numeric part from e.g. "CPO-2026-007" → 7
@@ -2648,6 +2651,7 @@ window.sbLoadAll=async function(){
         if(dashNav){nav('dashboard',dashNav);}else{refreshDash();}
       }catch(e){}
       try{renderCatalog();}catch(e){}
+      try{renderQuotes();}catch(e){}
       try{updateBadges();}catch(e){}
       try{updateNumPreviews();}catch(e){}
       try{buildMonthSel();}catch(e){}
