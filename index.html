@@ -1134,7 +1134,7 @@ const dd=(d1,d2)=>Math.floor((new Date(d1)-new Date(d2))/(864e5));
 document.getElementById('dateBadge').textContent=new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
 
 // ── COMPANY ───────────────────────────────────────────────
-let company={name:'Alphatec Trading OPC',short:'Alphatec',tagline:'Industrial Sales Solution',icon:'📊',owner:'M. Salvador',fy:'January',addr:'Unit 305 Brain Train Center, Sta Rosa Business Park, Greenfields City, Sta Rosa City, Laguna 4026',email:'info@alphatec.com',phone:''};
+let company={name:'Alphatec Trading OPC',short:'Alphatec',tagline:'Industrial Sales Solution',icon:'📊',owner:'M. Salvador',fy:'January',addr:'Unit 305 Brain Train Center, Sta Rosa Business Park, Greenfields City, Sta Rosa City, Laguna',email:'sales@alphatec-opc.com',phone:''};
 function openCompanyModal(){['coName','coShort','coTagline','coIcon','coOwner','coAddr','coEmail','coPhone'].forEach(id=>document.getElementById(id).value=company[id.replace('co','').toLowerCase()]||'');document.getElementById('coName').value=company.name;document.getElementById('coShort').value=company.short;document.getElementById('coTagline').value=company.tagline;document.getElementById('coIcon').value=company.icon;document.getElementById('coOwner').value=company.owner;document.getElementById('coAddr').value=company.addr;document.getElementById('coEmail').value=company.email;document.getElementById('coPhone').value=company.phone;document.getElementById('coFY').value=company.fy;updateCoPreview();}
 function updateCoPreview(){document.getElementById('coPreviewIcon').textContent=document.getElementById('coIcon').value||'📊';document.getElementById('coPreviewName').textContent=document.getElementById('coName').value||'Company Name';document.getElementById('coPreviewTag').textContent=document.getElementById('coTagline').value||'Tagline';}
 function saveCompany(){company.name=document.getElementById('coName').value.trim()||company.name;company.short=document.getElementById('coShort').value.trim();company.tagline=document.getElementById('coTagline').value.trim();company.icon=document.getElementById('coIcon').value.trim()||'📊';company.owner=document.getElementById('coOwner').value.trim();company.fy=document.getElementById('coFY').value;company.addr=document.getElementById('coAddr').value.trim();company.email=document.getElementById('coEmail').value.trim();company.phone=document.getElementById('coPhone').value.trim();
@@ -1486,7 +1486,7 @@ function printDocPopup(){
   // Gather inline document styles only (not app chrome)
   const docCSS=`
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px;margin:0}
     .print-doc{max-width:760px;margin:0 auto}
     .doc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1d4ed8}
     .doc-company h2{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:4px}
@@ -1504,7 +1504,7 @@ function printDocPopup(){
     .total-row.grand{font-size:1rem;font-weight:700;color:#1e293b;border-bottom:none;padding-top:10px;margin-top:4px}
     .doc-footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:8px}
     @media print{
-    body{padding:16px;font-size:12px}
+    body{padding:0;margin:1in 1in 1in 1in;font-size:12px}
     .hdr{page-break-inside:avoid}
     .parties{page-break-inside:avoid}
     .totals{page-break-inside:avoid}
@@ -1781,7 +1781,7 @@ function buildQuoteHTML(q){
   const vatEx=q.vatEx||+(q.total/1.12).toFixed(2);
   const vatAmt=q.vatAmt||+(vatEx*0.12).toFixed(2);
   const vatInc=q.vatInc||q.total;
-  const ALPHATEC_ADDR='Unit 305 Brain Train Center Sta Rosa Business Park, Greenfield City, Don Jose, Sta Rosa City, Laguna 4026';
+  const ALPHATEC_ADDR='Unit 305 Brain Train Center, Sta Rosa Business Park, Greenfields City, Sta Rosa City, Laguna';
   const addr=company.addr||ALPHATEC_ADDR;
   const lineRows=(q.lines||[]).map((l,i)=>`<tr>
     <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#374151">${i+1}</td>
@@ -1806,7 +1806,7 @@ function buildQuoteHTML(q){
   return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quotation ${q.num}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px;margin:0}
     .wrap{max-width:760px;margin:0 auto}
     .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #1e40af}
     .meta{text-align:right}
@@ -1825,7 +1825,7 @@ function buildQuoteHTML(q){
     .remarks{background:#f0fdf4;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bbf7d0;margin-bottom:14px}
     .accept{background:#eff6ff;border-radius:8px;padding:12px;font-size:.78rem;border:1px solid #bfdbfe;margin-bottom:14px}
     .footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:14px;border-top:1px solid #e2e8f0}
-    @media print{body{padding:20px}}
+    @media print{body{padding:0;margin:1in 1in 1in 1in;}}
   </style></head><body>
   <div class="wrap">
     <div class="hdr">
@@ -1868,9 +1868,20 @@ function buildQuoteHTML(q){
         <li>Issuance of Purchase Order or Notice to Proceed shall be the basis of an offer to buy.</li>
       </ol>
     </div>
-    <div class="closing" style="margin-bottom:16px;padding:12px 16px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:.8rem;color:#1e293b;line-height:1.7">
+    <div class="closing" style="margin-bottom:8px;padding:12px 16px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:.8rem;color:#1e293b;line-height:1.7">
       We hope our offer meets your requirement and look forward to a detailed discussion with you.<br><br>
-      Thank you.
+      Thank you.    </div>
+    <div style="margin-top:32px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:40px">
+      <div style="border-top:1.5px solid #1e293b;padding-top:10px;text-align:center">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Prepared by</div>
+        <div style="font-size:.78rem;color:#374151;margin-top:4px">${company.owner||'M. Salvador'}</div>
+        <div style="font-size:.7rem;color:#94a3b8">${company.name||'Alphatec Trading OPC'}</div>
+      </div>
+      <div style="border-top:1.5px solid #1e293b;padding-top:10px;text-align:center">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Conforme / Authorized by</div>
+        <div style="font-size:.78rem;color:#374151;margin-top:4px">&nbsp;</div>
+        <div style="font-size:.7rem;color:#94a3b8">Client Signature over Printed Name</div>
+      </div>
     </div>
     <div class="footer">
       ${company.name||'Alphatec Trading OPC'} &nbsp;·&nbsp; ${company.tagline||'Industrial Sales Solution'}<br>
@@ -1913,8 +1924,8 @@ Best regards,
 ${company.owner||'M. Salvador'}
 ${company.name||'Alphatec Trading OPC'}
 ${company.email||''}${company.phone?' | '+company.phone:''}
-Unit 305 Brain Train Center Sta Rosa Business Park
-Greenfield City, Don Jose, Sta Rosa City, Laguna 4026`;
+Unit 305 Brain Train Center, Sta Rosa Business Park
+Greenfields City, Sta Rosa City, Laguna`;
   window._pendingQuoteEmailId=id;
   openModal('mQEmail');
 }
