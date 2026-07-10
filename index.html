@@ -1021,6 +1021,10 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
       <div class="fg"><label>Balance</label><input class="fc" id="iBal" readonly style="background:#f1f5f9"/></div>
     </div>
     <div class="fg" style="margin-top:10px"><label>Status</label><select class="fc" id="iSt" style="width:200px"><option>Draft</option><option>Sent</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option></select></div>
+    <div id="iLinePreview" style="display:none;margin-top:14px">
+      <div style="font-size:.72rem;font-weight:700;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">📦 Line Items from Linked Client PO</div>
+      <div id="iLineTable" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:.78rem"></div>
+    </div>
   </div>
   <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mInv')">Cancel</button><button class="btn btn-primary" onclick="saveInv()">Save Invoice</button></div>
 </div></div>
@@ -1336,7 +1340,7 @@ function fsTab(id,el){document.querySelectorAll('.fs-tab').forEach(t=>t.classLis
 
 function openNewCPO(){window._cpoEditId=null;initCL();const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');document.getElementById('cN').value=num;document.getElementById('cDt').value=today();document.getElementById('cCl').value='';document.getElementById('cSt').value='Pending';document.querySelector('#mCPO .mh h3').textContent='New Client PO';openModal('mCPO');}
 function openNewSPO(){window._spoEditId=null;initSL();const num=peekNum(document.getElementById('spoPrefix')?.value||'SPO');document.getElementById('sN').value=num;document.getElementById('sDt').value=today();document.getElementById('sSup').value='';document.getElementById('sSt').value='Pending';const sTmEl=document.getElementById('sTm');if(sTmEl)sTmEl.value='Full Payment';const sDueEl=document.getElementById('sDue');if(sDueEl)sDueEl.value='';document.querySelector('#mSPO .mh h3').textContent='New Supplier PO';openModal('mSPO');}
-function openNewInv(){window._invEditId=null;fillInvPOSel();const num=peekNum(document.getElementById('invPrefix')?.value||'INV');document.getElementById('iN').value=num;if(document.getElementById('nextInvNum'))document.getElementById('nextInvNum').textContent=num;document.getElementById('iDt').value=today();document.getElementById('iPd').value=0;document.getElementById('iAmt').value='';document.getElementById('iBal').value='';document.getElementById('iPO').value='';document.getElementById('iCl').value='';document.getElementById('iSt').value='Draft';document.querySelector('#mInv .mh h3').textContent='New Invoice';openModal('mInv');}
+function openNewInv(){window._invEditId=null;fillInvPOSel();const num=peekNum(document.getElementById('invPrefix')?.value||'INV');document.getElementById('iN').value=num;if(document.getElementById('nextInvNum'))document.getElementById('nextInvNum').textContent=num;document.getElementById('iDt').value=today();document.getElementById('iPd').value=0;document.getElementById('iAmt').value='';document.getElementById('iBal').value='';document.getElementById('iPO').value='';document.getElementById('iCl').value='';document.getElementById('iSt').value='Draft';document.querySelector('#mInv .mh h3').textContent='New Invoice';const prev=document.getElementById('iLinePreview');if(prev)prev.style.display='none';openModal('mInv');}
 function openModal(id){
   if(id==='mCompany')openCompanyModal();
   if(id==='mCPO'){
@@ -1619,10 +1623,13 @@ function addQLine(){
   row.className='li-grid li-body';
   row.id='qRow'+idx;
   row.innerHTML=`
-    <select class="fc" style="font-size:.75rem" onchange="qAutoFill(${idx},this)">
-      <option value="">— Select or type below —</option>
-      ${catalog.map(c=>`<option value="${c.id}" data-sp="${c.sp}" data-desc="${c.desc}" data-unit="${c.unit}">${c.code} — ${c.desc}</option>`).join('')}
-    </select>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <select class="fc" id="qSel${idx}" style="font-size:.72rem" onchange="qAutoFill(${idx},this)">
+        <option value="">— Select from catalog —</option>
+        ${catalog.map(c=>`<option value="${c.id}" data-sp="${c.sp}" data-desc="${c.desc}" data-unit="${c.unit}">${c.code} — ${c.desc}</option>`).join('')}
+      </select>
+      <input class="fc" id="qDesc${idx}" placeholder="or type description" style="font-size:.75rem"/>
+    </div>
     <input class="fc" id="qUnit${idx}" style="font-size:.75rem" value="pcs"/>
     <input class="fc" id="qQty${idx}" type="number" value="1" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
     <input class="fc" id="qUP${idx}" type="number" value="0" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
@@ -1634,6 +1641,8 @@ function addQLine(){
 function qAutoFill(idx,sel){
   const opt=sel.options[sel.selectedIndex];
   if(!opt||!opt.value)return;
+  const descEl=document.getElementById('qDesc'+idx);
+  if(descEl&&!descEl.value)descEl.value=opt.dataset.desc||'';
   document.getElementById('qUP'+idx).value=opt.dataset.sp||0;
   document.getElementById('qUnit'+idx).value=opt.dataset.unit||'pcs';
   calcQLine(idx);
@@ -1670,9 +1679,11 @@ function getQLines(){
   const lines=[];
   document.querySelectorAll('#qLines .li-body').forEach(row=>{
     const idx=row.id.replace('qRow','');
-    const sel=row.querySelector('select');
+    const sel=document.getElementById('qSel'+idx);
+    const descEl=document.getElementById('qDesc'+idx);
     const catItem=sel&&sel.value?catalog.find(c=>c.id===+sel.value):null;
-    const desc=catItem?catItem.desc:(sel&&sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'Item');
+    // Priority: typed description > catalog desc > select option text
+    const desc=(descEl&&descEl.value.trim())?descEl.value.trim():catItem?catItem.desc:'Item';
     const qty=+document.getElementById('qQty'+idx).value||0;
     const up=+document.getElementById('qUP'+idx).value||0;
     const total=+document.getElementById('qTotal'+idx).value||0;
@@ -1730,6 +1741,11 @@ function editQuote(id){
   (q.lines||[]).forEach(l=>{
     addQLine();
     const idx=qLI-1;
+    // Hide catalog select — show description input prominently with saved value
+    const sel=document.getElementById('qSel'+idx);
+    if(sel)sel.style.display='none';
+    const descEl=document.getElementById('qDesc'+idx);
+    if(descEl){descEl.value=l.desc||'';descEl.style.fontWeight='600';descEl.placeholder='Description';}
     document.getElementById('qUnit'+idx).value=l.unit||'pcs';
     document.getElementById('qQty'+idx).value=l.qty||1;
     document.getElementById('qUP'+idx).value=l.up||0;
@@ -2043,7 +2059,27 @@ function renderSPO(){const s=(document.getElementById('sSrch').value||'').toLowe
 
 // ── INVOICES ──────────────────────────────────────────────
 function fillInvPOSel(){document.getElementById('iPO').innerHTML='<option value="">— Select PO —</option>'+clientPOs.map(p=>`<option value="${p.num}">${p.num} — ${p.client} (${fmt(p.total)})</option>`).join('');}
-function fillInvFromPO(){const po=clientPOs.find(p=>p.num===document.getElementById('iPO').value);if(po){document.getElementById('iCl').value=po.client;document.getElementById('iAmt').value=po.total;document.getElementById('iTerms').value=po.terms||'Full Payment';calcIB();autoCalcDueDate();}}
+function fillInvFromPO(){
+  const po=clientPOs.find(p=>p.num===document.getElementById('iPO').value);
+  const preview=document.getElementById('iLinePreview');
+  const tbl=document.getElementById('iLineTable');
+  if(po){
+    document.getElementById('iCl').value=po.client;
+    document.getElementById('iAmt').value=po.total;
+    document.getElementById('iTerms').value=po.terms||'Full Payment';
+    calcIB();autoCalcDueDate();
+    // Show line items from CPO
+    if(po.lines&&po.lines.length&&preview&&tbl){
+      const rows=po.lines.map((ln,i)=>`<div style="display:grid;grid-template-columns:1fr 60px 90px 90px;gap:0;border-bottom:1px solid #f1f5f9;padding:7px 10px;background:${i%2===0?'#fff':'#f8fafc'}"><span style="color:#1e293b">${ln.desc||'—'}</span><span style="text-align:center;color:#64748b;font-size:.72rem">${ln.qty||1}</span><span style="text-align:right;color:#64748b">${fmt(ln.price||0)}</span><span style="text-align:right;font-weight:600;color:#1d4ed8">${fmt(ln.amount||0)}</span></div>`).join('');
+      const header=`<div style="display:grid;grid-template-columns:1fr 60px 90px 90px;gap:0;padding:6px 10px;background:#f1f5f9;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase"><span>Description</span><span style="text-align:center">Qty</span><span style="text-align:right">Unit Price</span><span style="text-align:right">Amount</span></div>`;
+      const total=`<div style="padding:8px 10px;background:#eff6ff;text-align:right;font-size:.82rem;font-weight:700;color:#1d4ed8">Total: ${fmt(po.total)}</div>`;
+      tbl.innerHTML=header+rows+total;
+      preview.style.display='block';
+    } else if(preview){preview.style.display='none';}
+  } else {
+    if(preview)preview.style.display='none';
+  }
+}
 function calcIB(){const a=+document.getElementById('iAmt').value||0,pd=+document.getElementById('iPd').value||0;document.getElementById('iBal').value=(a-pd).toFixed(2);}
 function saveInv(){const n=document.getElementById('iN').value.trim(),cl=document.getElementById('iCl').value.trim();if(!n||!cl)return;const amt=+document.getElementById('iAmt').value||0,pd=+document.getElementById('iPd').value||0;const editId=window._invEditId||null;if(editId){const idx=invoices.findIndex(x=>x.id===editId);if(idx>-1){invoices[idx]={...invoices[idx],num:n,poRef:document.getElementById('iPO').value,client:cl,date:document.getElementById('iDt').value,due:document.getElementById('iDue').value,terms:document.getElementById('iTerms').value,amount:amt,paid:pd,balance:amt-pd,status:document.getElementById('iSt').value};const arIdx=arRecords.findIndex(a=>a.invNum===invoices[idx].num||a.id===editId);if(arIdx>-1){arRecords[arIdx]={...arRecords[arIdx],invNum:n,client:cl,invDate:invoices[idx].date,dueDate:invoices[idx].due,amount:amt,paid:pd,balance:amt-pd,status:pd===0?'Outstanding':pd<amt?'Partially Paid':'Paid'};}logA('🧾',`Invoice updated: ${n}`);if(window.sbSave)window.sbSave('invoices',{id:editId,invoice_number:n,client_name:cl,po_ref:document.getElementById('iPO').value||null,date:invoices[idx].date||null,due_date:invoices[idx].due||null,terms:invoices[idx].terms||'',total_amount:amt,amount_paid:pd,status:invoices[idx].status});}window._invEditId=null;}else{const inv={id:++idI,num:n,poRef:document.getElementById('iPO').value,client:cl,date:document.getElementById('iDt').value,due:document.getElementById('iDue').value,terms:document.getElementById('iTerms').value,amount:amt,paid:pd,balance:amt-pd,status:document.getElementById('iSt').value};const pf=document.getElementById('invPrefix')?.value||'INV';seqCounters[pf]=seqCounters[pf]||seqCounters['INV'];seqCounters[pf]++;invoices.push(inv);arRecords.push({id:++idAR,ref:'AR-'+idAR.toString().padStart(6,'0'),invNum:n,client:cl,invDate:inv.date,dueDate:inv.due,amount:amt,paid:pd,balance:amt-pd,status:pd===0?'Outstanding':pd<amt?'Partially Paid':'Paid'});logA('🧾',`Invoice ${n} — ${cl} — ${fmt(amt)} due ${inv.due}`);if(window.sbSave)window.sbSave('invoices',{id:inv.id,invoice_number:inv.num,client_name:inv.client,po_ref:inv.poRef||null,date:inv.date||null,due_date:inv.due||null,terms:inv.terms||'',total_amount:inv.amount||0,amount_paid:inv.paid||0,status:inv.status});}closeModal('mInv');setTimeout(()=>{renderInv();updateBadges();window.sbRebuildAR();refreshDash();},10);}
 function renderInv(){const s=(document.getElementById('iSrch').value||'').toLowerCase(),st=document.getElementById('iStF').value;const f=invoices.filter(i=>(!s||(i.num+i.client).toLowerCase().includes(s))&&(!st||i.status===st));document.getElementById('invTbl').innerHTML=f.length?f.map(i=>`<tr><td style="font-weight:600;color:#1d4ed8">${i.num}</td><td>${i.poRef?`<span class="badge bb">${i.poRef}</span>`:'—'}</td><td>${i.client}</td><td>${i.date||'—'}</td><td>${i.due||'—'}</td><td style="font-size:.75rem;color:#64748b">${i.terms||'—'}</td><td style="font-weight:600">${fmt(i.amount)}</td><td style="color:#16a34a">${fmt(i.paid)}</td><td style="color:${i.balance>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(i.balance)}</td><td><span class="badge ${sbMap[i.status]||'bgr'}">${i.status}</span></td><td style="display:flex;gap:4px;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="viewInv(${i.id})">👁 View</button><button class="btn btn-ghost btn-sm" onclick="editInv(${i.id})">✏️</button><button class="btn btn-ghost btn-sm" onclick="printInvoice(${i.id})">🖨️</button><button class="btn btn-danger" onclick="deleteInv(${i.id})">✕</button></td></tr>`).join(''):`<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px">No invoices.</td></tr>`;document.getElementById('iFА').textContent=fmt(f.reduce((a,i)=>a+i.amount,0));document.getElementById('iFP').textContent=fmt(f.reduce((a,i)=>a+i.paid,0));document.getElementById('iFB').textContent=fmt(f.reduce((a,i)=>a+i.balance,0));}
@@ -2748,7 +2784,7 @@ const invLinesHtml=linkedCPO&&linkedCPO.lines&&linkedCPO.lines.length?
   '<div style="margin-top:14px"><div style="font-size:.75rem;font-weight:700;color:#374151;margin-bottom:8px">📦 Line Items (from '+linkedCPO.num+')</div><table style="width:100%;border-collapse:collapse;font-size:.78rem"><thead><tr><th style="text-align:left;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Description</th><th style="padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Type</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Qty</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Unit Price</th><th style="text-align:right;padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;color:#64748b">Amount</th></tr></thead><tbody>'+linkedCPO.lines.map(ln=>'<tr><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">'+(ln.desc||'—')+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center"><span class="badge '+(ln.type==='product'?'bb':'bp')+'">'+(ln.type==='product'?'Product':'Service')+'</span></td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+(ln.qty||1)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right">'+fmt(ln.price||0)+'</td><td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">'+fmt(ln.amount||0)+'</td></tr>').join('')+'</tbody></table></div>':
   '<div style="margin-top:14px;color:#94a3b8;font-size:.78rem;text-align:center;padding:12px;background:#f8fafc;border-radius:8px">'+(inv.poRef?'No line items found for CPO '+inv.poRef:'No linked PO — line items not available')+'</div>';
 document.getElementById('vInvTitle').textContent=inv.num+' — '+inv.client;document.getElementById('vInvSub').textContent='Date: '+(inv.date||'—')+'  ·  Due: '+(inv.due||'—')+'  ·  '+inv.status;document.getElementById('vInvBody').innerHTML='<div class="g3" style="margin-bottom:14px"><div class="fg"><label>Invoice #</label><input class="fc" value="'+inv.num+'" readonly style="background:#f1f5f9;font-weight:700;color:#1d4ed8"/></div><div class="fg"><label>Client</label><input class="fc" value="'+inv.client+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>PO Ref</label><input class="fc" value="'+(inv.poRef||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Date</label><input class="fc" value="'+(inv.date||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Due</label><input class="fc" value="'+(inv.due||'—')+'" readonly style="background:#f1f5f9"/></div><div class="fg"><label>Terms</label><input class="fc" value="'+(inv.terms||'—')+'" readonly style="background:#f1f5f9"/></div></div><div style="background:#f0fdf4;border-radius:8px;padding:14px;margin-bottom:14px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center"><div style="padding:10px;background:#eff6ff;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Amount</div><div style="font-weight:700;color:#1d4ed8">'+fmt(inv.amount)+'</div></div><div style="padding:10px;background:#f0fdf4;border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Paid</div><div style="font-weight:700;color:#16a34a">'+fmt(inv.paid)+'</div></div><div style="padding:10px;background:'+(inv.balance>0?'#fef2f2':'#f0fdf4')+';border-radius:8px"><div style="font-size:.65rem;color:#94a3b8;margin-bottom:4px">Balance</div><div style="font-weight:700;color:'+(inv.balance>0?'#dc2626':'#16a34a')+'">'+fmt(inv.balance)+'</div></div></div></div><div style="text-align:center;margin-bottom:8px"><span class="badge '+(sbMap[inv.status]||'bgr')+'" style="font-size:.82rem;padding:6px 20px">'+inv.status+'</span></div>'+invLinesHtml;openModal('mViewInv');}
-window.editInv=function(id){const inv=invoices.find(x=>x.id===id);if(!inv)return;closeModal('mViewInv');window._invEditId=id;document.getElementById('iN').value=inv.num;document.getElementById('iCl').value=inv.client;document.getElementById('iDt').value=inv.date||'';document.getElementById('iDue').value=inv.due||'';document.getElementById('iTerms').value=inv.terms||'Full Payment';document.getElementById('iAmt').value=inv.amount;document.getElementById('iPd').value=inv.paid;document.getElementById('iBal').value=inv.balance;document.getElementById('iSt').value=inv.status;document.querySelector('#mInv .mh h3').textContent='Edit Invoice — '+inv.num;openModal('mInv');setTimeout(()=>{document.getElementById('iPO').value=inv.poRef||'';},50);};
+window.editInv=function(id){const inv=invoices.find(x=>x.id===id);if(!inv)return;closeModal('mViewInv');window._invEditId=id;document.getElementById('iN').value=inv.num;document.getElementById('iCl').value=inv.client;document.getElementById('iDt').value=inv.date||'';document.getElementById('iDue').value=inv.due||'';document.getElementById('iTerms').value=inv.terms||'Full Payment';document.getElementById('iAmt').value=inv.amount;document.getElementById('iPd').value=inv.paid;document.getElementById('iBal').value=inv.balance;document.getElementById('iSt').value=inv.status;document.querySelector('#mInv .mh h3').textContent='Edit Invoice — '+inv.num;const prev=document.getElementById('iLinePreview');if(prev)prev.style.display='none';openModal('mInv');setTimeout(()=>{document.getElementById('iPO').value=inv.poRef||'';fillInvFromPO();},80);};
 window.printInvoiceFromCPO=function(cpoId){const cpo=clientPOs.find(p=>p.id===cpoId);if(!cpo)return;const inv=invoices.find(i=>i.poRef===cpo.num);if(inv){window.printInvoice(inv.id);return;}document.getElementById('printDocContent').innerHTML='<div class="print-doc">Draft Invoice for '+cpo.num+'</div>';openPrintPreview();};
 
 // ── LEAD EDIT & PIPELINE ─────────────────────────────────
