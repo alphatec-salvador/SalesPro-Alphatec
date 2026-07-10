@@ -1605,6 +1605,291 @@ function printSupplierPO(spoId){
   win.document.close();win.focus();setTimeout(()=>win.print(),500);
 }
 
+function closePrintDoc(){document.getElementById('printDocWrap').style.display='none';}
+function printDocPopup(){
+  const content=document.getElementById('printDocContent').innerHTML;
+  // Gather inline document styles only (not app chrome)
+  const docCSS=`
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:40px;font-size:14px}
+    .print-doc{max-width:760px;margin:0 auto}
+    .doc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1d4ed8}
+    .doc-company h2{font-size:1.1rem;font-weight:700;color:#1e293b;margin-bottom:4px}
+    .doc-company p{font-size:.78rem;color:#64748b;margin-top:2px}
+    .doc-meta{text-align:right}.doc-meta h3{font-size:.85rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px}
+    .doc-meta p{font-size:.78rem;color:#64748b;margin-top:2px}
+    .doc-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+    .doc-party h4{font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+    .doc-party p{font-size:.82rem;color:#374151;margin-top:3px}
+    .doc-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .doc-table thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}
+    .doc-table tbody td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#374151}
+    .doc-total-box{background:#f8fafc;border-radius:8px;padding:14px 16px;margin-bottom:16px;border:1px solid #e2e8f0}
+    .total-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem;color:#475569;border-bottom:1px solid #f1f5f9}
+    .total-row.grand{font-size:1rem;font-weight:700;color:#1e293b;border-bottom:none;padding-top:10px;margin-top:4px}
+    .doc-footer{text-align:center;font-size:.72rem;color:#94a3b8;padding-top:16px;border-top:1px solid #e2e8f0;margin-top:8px}
+    @media print{body{padding:20px}}
+  `;
+  const win=window.open('','_blank','width=860,height=720');
+  if(!win){alert('Please allow popups for this site to print.');return;}
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Document</title><style>'+docCSS+'</style></head><body>'+content+'</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{win.print();},500);
+}
+
+// ── EXPENSE HELPERS ───────────────────────────────────────
+function fillExpCatSelect(){const s=document.getElementById('eCat');if(s)s.innerHTML=CATS.map(c=>`<option>${c.name}</option>`).join('');}
+function buildMonthSel(){document.getElementById('monthSel').innerHTML=['All','January','February','March','April','May','June'].map(m=>`<button class="mb2${m===selMonth?' active':''}" onclick="selMonth='${m}';buildMonthSel();renderExp();renderExpCh()">${m}</button>`).join('');}
+function renderBudgetForm(){document.getElementById('budgetForm').innerHTML=CATS.map(c=>`<div class="fg" style="margin-bottom:12px"><label>${c.icon} ${c.name}</label><input class="fc" type="number" id="bg_${c.name.replace(/\W/g,'_')}" value="${budgets[c.name]||0}"/></div>`).join('');}
+function saveBudgets(){CATS.forEach(c=>{const el=document.getElementById('bg_'+c.name.replace(/\W/g,'_'));if(el)budgets[c.name]=+el.value||0;});closeModal('mBudget');renderExp();renderExpCh();}
+function calcExpVAT(){
+  const total=+document.getElementById('eAmt').value||0;
+  if(total>0){
+    const vatable=+(total/1.12).toFixed(2);
+    const vat=+(vatable*0.12).toFixed(2);
+    document.getElementById('eVatable').value=vatable;
+    document.getElementById('eVat').value=vat;
+  } else {
+    document.getElementById('eVatable').value='';
+    document.getElementById('eVat').value='';
+  }
+}
+function calcExpVATFromVatable(){
+  const vatable=+document.getElementById('eVatable').value||0;
+  const vat=+(vatable*0.12).toFixed(2);
+  document.getElementById('eVat').value=vatable>0?vat:'';
+  const exempt=+document.getElementById('eVatExempt').value||0;
+  const total=+(vatable+vat+exempt).toFixed(2);
+  if(vatable>0)document.getElementById('eAmt').value=total;
+}
+function calcExpVATExempt(){
+  const exempt=+document.getElementById('eVatExempt').value||0;
+  const vatable=+document.getElementById('eVatable').value||0;
+  const vat=+document.getElementById('eVat').value||0;
+  if(exempt>0&&vatable===0){
+    document.getElementById('eAmt').value=exempt;
+  }
+}
+function saveExp(){const ref=document.getElementById('eRef').value.trim(),amt=+document.getElementById('eAmt').value||0;if(!ref||!amt)return;const vatable=+document.getElementById('eVatable').value||0;const vat=+document.getElementById('eVat').value||0;const vatExempt=+document.getElementById('eVatExempt').value||0;const tin=document.getElementById('eTin').value.trim();const _ne={id:expId++,ref,date:document.getElementById('eDt').value,month:document.getElementById('eMon').value,cat:document.getElementById('eCat').value,desc:document.getElementById('eDesc').value,payee:document.getElementById('ePayee').value,tin,amount:amt,vatable,vat,vatExempt,mode:document.getElementById('eMod').value,status:document.getElementById('eSt').value};expenses.push(_ne);logA('📁',`Expense ${ref} — ${fmt(amt)}`);closeModal('mExp');renderExp();renderExpCh();updateBadges();if(window.sbSave)window.sbSave('expenses',{id:_ne.id,ref:_ne.ref,date:_ne.date||null,month:_ne.month||'',category:_ne.cat||'',description:_ne.desc||'',payee:_ne.payee||'',tin_number:_ne.tin||'',amount:_ne.amount||0,vatable_amount:_ne.vatable||0,vat_amount:_ne.vat||0,vat_exempt:_ne.vatExempt||0,payment_mode:_ne.mode||'',status:_ne.status||'Pending'});}
+function approveExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Approved';renderExp();renderExpCh();refreshDash();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',tin_number:e.tin||'',amount:e.amount||0,vatable_amount:e.vatable||0,vat_amount:e.vat||0,vat_exempt:e.vatExempt||0,payment_mode:e.mode||'',status:'Approved'});}
+function rejectExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;e.status='Rejected';renderExp();renderExpCh();if(window.sbSave)window.sbSave('expenses',{id:e.id,ref:e.ref,date:e.date||null,month:e.month||'',category:e.cat||'',description:e.desc||'',payee:e.payee||'',tin_number:e.tin||'',amount:e.amount||0,vatable_amount:e.vatable||0,vat_amount:e.vat||0,vat_exempt:e.vatExempt||0,payment_mode:e.mode||'',status:'Rejected'});}
+function renderExp(){
+  buildMonthSel();fillExpCatSelect();
+  const cf=document.getElementById('eCatF');if(cf)cf.innerHTML='<option value="">All Categories</option>'+CATS.map(c=>`<option>${c.name}</option>`).join('');
+  const totE=expenses.filter(e=>e.status!=='Rejected').reduce((a,e)=>a+e.amount,0),totB=Object.values(budgets).reduce((a,v)=>a+v,0),appr=expenses.filter(e=>e.status==='Approved').reduce((a,e)=>a+e.amount,0),pend=expenses.filter(e=>e.status==='Pending').length;
+  document.getElementById('eK1').textContent=fmt(totE);document.getElementById('eK1t').textContent=expenses.length+' entries';document.getElementById('eK2').textContent=totB>0?((totE/totB)*100).toFixed(0)+'%':'0%';document.getElementById('eK2s').textContent='of '+fmt(totB);document.getElementById('eK3').textContent=pend;document.getElementById('eK4').textContent=fmt(appr);
+  document.getElementById('catGrid').innerHTML=CATS.map(c=>{const sp=expenses.filter(e=>e.cat===c.name&&e.status!=='Rejected').reduce((a,e)=>a+e.amount,0),bg=budgets[c.name]||0,pct=bg>0?Math.min(100,sp/bg*100):0,over=sp>bg&&bg>0;return`<div class="cc"><div class="ci">${c.icon}</div><div class="cn">${c.name}</div><div class="cv" style="color:${over?'#dc2626':c.color}">${fmt(sp)}</div><div class="bbar"><div class="bfill" style="width:${pct}%;background:${over?'#ef4444':c.color}"></div></div><div class="bpct">${pct.toFixed(0)}% of ${fmt(bg)}${over?' ⚠️':''}</div></div>`;}).join('');
+  const s=(document.getElementById('eSrch')?document.getElementById('eSrch').value||'':'').toLowerCase(),cfv=document.getElementById('eCatF')?document.getElementById('eCatF').value:'',sfv=document.getElementById('eStF')?document.getElementById('eStF').value:'';
+  const f=expenses.filter(e=>(selMonth==='All'||e.month===selMonth)&&(!s||(e.ref+e.cat+e.desc+e.payee).toLowerCase().includes(s))&&(!cfv||e.cat===cfv)&&(!sfv||e.status===sfv));
+  const stC={Approved:'bg',Pending:'ba',Rejected:'br'};
+  document.getElementById('expTbl').innerHTML=f.length?f.map(e=>`<tr><td style="font-weight:600;color:#7c3aed;font-size:.75rem">${e.ref}</td><td>${e.date||'—'}</td><td><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.68rem;font-weight:600;background:${(CATS.find(c=>c.name===e.cat)?.color||'#64748b')+'22'};color:${CATS.find(c=>c.name===e.cat)?.color||'#64748b'}">${CATS.find(c=>c.name===e.cat)?.icon||''} ${e.cat}</span></td><td><div style="font-weight:600;font-size:.8rem">${e.payee||'—'}</div>${e.tin?`<div style="font-size:.68rem;color:#94a3b8">TIN: ${e.tin}</div>`:''}</td><td style="font-weight:700">${fmt(e.amount)}</td><td style="font-size:.78rem;color:#0d9488">${e.vatable?fmt(e.vatable):'—'}</td><td style="font-size:.78rem;color:#16a34a">${e.vat?fmt(e.vat):'—'}</td><td style="font-size:.78rem;color:#64748b">${e.vatExempt?fmt(e.vatExempt):'—'}</td><td style="font-size:.75rem">${e.mode}</td><td><span class="badge bgr">${e.month}</span></td><td><span class="badge ${stC[e.status]||'bgr'}">${e.status}</span></td><td style="display:flex;gap:4px">${e.status==='Pending'?`<button class="btn btn-success btn-sm" onclick="approveExp(${e.id})">✓</button><button class="btn btn-danger" onclick="rejectExp(${e.id})">✕</button>`:''}<button class="btn btn-danger" onclick="deleteExp(${e.id})">🗑</button></td></tr>`).join(''):`<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:24px">No expenses.</td></tr>`;
+  document.getElementById('eFT').textContent=fmt(f.reduce((a,e)=>a+e.amount,0));
+}
+let expCh=[null,null,null,null];
+function renderExpCh(){
+  const mNames=['January','February','March','April','May','June'];
+  const ds=CATS.map(c=>({label:c.name,data:mNames.map(m=>expenses.filter(e=>e.month===m&&e.cat===c.name&&e.status!=='Rejected').reduce((a,e)=>a+e.amount,0)),backgroundColor:c.color+'cc',borderRadius:3}));
+  if(expCh[0])expCh[0].destroy();expCh[0]=new Chart(document.getElementById('cE1'),{type:'bar',data:{labels:mNames.map(m=>m.slice(0,3)),datasets:ds},options:{plugins:{legend:{labels:{font:{size:9},color:'#374151',boxWidth:10}}},scales:{x:{stacked:true,ticks:{color:'#64748b',font:{size:10}}},y:{stacked:true,ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+  const ct=CATS.map(c=>expenses.filter(e=>e.cat===c.name&&e.status!=='Rejected').reduce((a,e)=>a+e.amount,0));
+  if(expCh[1])expCh[1].destroy();expCh[1]=new Chart(document.getElementById('cE2'),{type:'doughnut',data:{labels:CATS.map(c=>c.icon+' '+c.name.split(' ')[0]),datasets:[{data:ct,backgroundColor:CATS.map(c=>c.color),borderWidth:0}]},options:{plugins:{legend:{position:'right',labels:{font:{size:9},color:'#374151',padding:6}}},cutout:'55%'}});
+  const ac=CATS.map(c=>expenses.filter(e=>e.cat===c.name&&e.status!=='Rejected').reduce((a,e)=>a+e.amount,0)),bg2=CATS.map(c=>budgets[c.name]||0);
+  if(expCh[2])expCh[2].destroy();expCh[2]=new Chart(document.getElementById('cE3'),{type:'bar',data:{labels:CATS.map(c=>c.icon+' '+c.name.split('&')[0].trim()),datasets:[{label:'Actual',data:ac,backgroundColor:ac.map((a,i)=>a>bg2[i]?'#ef444488':'#3b82f688'),borderRadius:4},{label:'Budget',data:bg2,backgroundColor:'#94a3b820',borderRadius:4,borderWidth:1,borderColor:'#94a3b8'}]},options:{plugins:{legend:{labels:{font:{size:10},color:'#374151'}}},scales:{x:{ticks:{color:'#64748b',font:{size:9}}},y:{ticks:{color:'#64748b',callback:v=>'₱'+v.toLocaleString()},grid:{color:'#f1f5f9'}}}}});
+  const apv=expenses.filter(e=>e.status==='Approved').reduce((a,e)=>a+e.amount,0),pnv=expenses.filter(e=>e.status==='Pending').reduce((a,e)=>a+e.amount,0),rjv=expenses.filter(e=>e.status==='Rejected').reduce((a,e)=>a+e.amount,0);
+  if(expCh[3])expCh[3].destroy();expCh[3]=new Chart(document.getElementById('cE4'),{type:'pie',data:{labels:['Approved','Pending','Rejected'],datasets:[{data:[apv,pnv,rjv],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#374151',padding:8}}}}});
+}
+
+// ── QUOTATIONS ────────────────────────────────────────────
+let quotations=[];
+let qId=1;
+let editingQId=null;
+let qLI=0;
+
+function openNewQuote(){
+  editingQId=null;qLI=0;
+  const num=peekQNum();
+  document.getElementById('mQuoteTitle').textContent='New Quotation';
+  document.getElementById('qN').value=num;
+  document.getElementById('qDt').value=today();
+  const valDate=new Date();valDate.setDate(valDate.getDate()+30);
+  document.getElementById('qVal').value=valDate.toISOString().slice(0,10);
+  document.getElementById('qCl').value='';
+  document.getElementById('qTm').value='Full Payment';
+  document.getElementById('qRem').value='';
+  document.getElementById('qSt').value='Draft';
+  document.getElementById('qLines').innerHTML='';
+  // Populate client datalist
+  const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+  document.getElementById('dlClientsQ').innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+  ['qMS','qMT'].forEach(id=>document.getElementById(id).textContent='₱0');
+  addQLine();
+  openModal('mQuote');
+}
+
+function addQLine(){
+  const idx=qLI++;
+  const row=document.createElement('div');
+  row.className='li-grid li-body';
+  row.id='qRow'+idx;
+  row.innerHTML=`
+    <select class="fc" style="font-size:.75rem" onchange="qAutoFill(${idx},this)">
+      <option value="">— Select or type below —</option>
+      ${catalog.map(c=>`<option value="${c.id}" data-sp="${c.sp}" data-desc="${c.desc}" data-unit="${c.unit}">${c.code} — ${c.desc}</option>`).join('')}
+    </select>
+    <input class="fc" id="qUnit${idx}" style="font-size:.75rem" value="pcs"/>
+    <input class="fc" id="qQty${idx}" type="number" value="1" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
+    <input class="fc" id="qUP${idx}" type="number" value="0" min="0" style="text-align:right;font-size:.75rem" oninput="calcQLine(${idx})"/>
+    <input class="fc" id="qTotal${idx}" type="number" value="0" readonly style="text-align:right;font-size:.75rem;background:#f0fdf4;font-weight:600"/>
+    <button class="btn btn-danger" style="padding:4px 8px" onclick="removeQLine(${idx})">✕</button>`;
+  document.getElementById('qLines').appendChild(row);
+}
+
+function qAutoFill(idx,sel){
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.value)return;
+  document.getElementById('qUP'+idx).value=opt.dataset.sp||0;
+  document.getElementById('qUnit'+idx).value=opt.dataset.unit||'pcs';
+  calcQLine(idx);
+}
+
+function calcQLine(idx){
+  const qty=+document.getElementById('qQty'+idx).value||0;
+  const up=+document.getElementById('qUP'+idx).value||0;
+  document.getElementById('qTotal'+idx).value=(qty*up).toFixed(2);
+  calcQTotals();
+}
+
+function calcQTotals(){
+  let sub=0;
+  document.querySelectorAll('#qLines .li-body').forEach(row=>{
+    const idx=row.id.replace('qRow','');
+    sub+=+document.getElementById('qTotal'+idx).value||0;
+  });
+  const vatEx=+(sub/1.12).toFixed(2);
+  const vatAmt=+(vatEx*0.12).toFixed(2);
+  const vatInc=+(vatEx+vatAmt).toFixed(2);
+  document.getElementById('qMS').textContent=fmt(vatEx);
+  document.getElementById('qMVat').textContent=fmt(vatAmt);
+  document.getElementById('qMT').textContent=fmt(vatInc);
+}
+
+function removeQLine(idx){
+  const row=document.getElementById('qRow'+idx);
+  if(row)row.remove();
+  calcQTotals();
+}
+
+function getQLines(){
+  const lines=[];
+  document.querySelectorAll('#qLines .li-body').forEach(row=>{
+    const idx=row.id.replace('qRow','');
+    const sel=row.querySelector('select');
+    const catItem=sel&&sel.value?catalog.find(c=>c.id===+sel.value):null;
+    const desc=catItem?catItem.desc:(sel&&sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'Item');
+    const qty=+document.getElementById('qQty'+idx).value||0;
+    const up=+document.getElementById('qUP'+idx).value||0;
+    const total=+document.getElementById('qTotal'+idx).value||0;
+    const unit=document.getElementById('qUnit'+idx).value||'pcs';
+    if(qty>0||up>0)lines.push({desc,unit,qty,up,total,catId:catItem?catItem.id:null});
+  });
+  return lines;
+}
+
+function saveQuote(){
+  const client=document.getElementById('qCl').value.trim();
+  if(!client){alert('Client name is required.');return;}
+  const lines=getQLines();
+  const vatEx=+(lines.reduce((a,l)=>a+l.total,0)/1.12).toFixed(2);
+  const vatAmt=+(vatEx*0.12).toFixed(2);
+  const vatInc=+(vatEx+vatAmt).toFixed(2);
+  const isNew=!editingQId;
+  const num=isNew?nextQNum():document.getElementById('qN').value.trim();
+  const q={
+    id:editingQId||qId++,
+    num,
+    date:document.getElementById('qDt').value,
+    validUntil:document.getElementById('qVal').value,
+    client,
+    terms:document.getElementById('qTm').value,
+    remarks:document.getElementById('qRem').value,
+    status:document.getElementById('qSt').value,
+    lines,
+    total:vatInc,
+    vatEx,vatAmt,vatInc
+  };
+  if(editingQId){quotations=quotations.map(x=>x.id===editingQId?q:x);editingQId=null;}
+  else quotations.push(q);
+  logA('📝',`Quotation ${num} — ${client} — ${fmt(vatInc)}`);
+  if(window.sbSave)window.sbSave('quotations',{id:q.id,quote_number:q.num,client_name:q.client,date:q.date||null,valid_until:q.validUntil||null,terms:q.terms||'',remarks:q.remarks||'',status:q.status||'Draft',lines:JSON.stringify(q.lines||[]),total_amount:q.total||0,vat_ex:q.vatEx||0,vat_amt:q.vatAmt||0,vat_inc:q.vatInc||0});
+  closeModal('mQuote');
+  renderQuotes();
+  updateBadges();
+}
+
+function editQuote(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  editingQId=id;qLI=0;
+  document.getElementById('mQuoteTitle').textContent='Edit Quotation';
+  document.getElementById('qN').value=q.num;
+  document.getElementById('qDt').value=q.date;
+  document.getElementById('qVal').value=q.validUntil||'';
+  document.getElementById('qCl').value=q.client;
+  document.getElementById('qTm').value=q.terms||'Full Payment';
+  document.getElementById('qRem').value=q.remarks||'';
+  document.getElementById('qSt').value=q.status||'Draft';
+  document.getElementById('qLines').innerHTML='';
+  const clients=[...new Set(clientPOs.map(p=>p.client).filter(Boolean))].sort();
+  document.getElementById('dlClientsQ').innerHTML=clients.map(c=>`<option value="${c}">`).join('');
+  (q.lines||[]).forEach(l=>{
+    addQLine();
+    const idx=qLI-1;
+    document.getElementById('qUnit'+idx).value=l.unit||'pcs';
+    document.getElementById('qQty'+idx).value=l.qty||1;
+    document.getElementById('qUP'+idx).value=l.up||0;
+    document.getElementById('qTotal'+idx).value=l.total||0;
+  });
+  if(!q.lines||!q.lines.length)addQLine();
+  calcQTotals();
+  openModal('mQuote');
+}
+
+function deleteQuote(id){if(!confirm('Delete this quotation?'))return;quotations=quotations.filter(x=>x.id!==id);renderQuotes();updateBadges();if(window.sbDelete)window.sbDelete('quotations',id);}
+
+function convertQuoteToCPO(id){
+  const q=quotations.find(x=>x.id===id);if(!q)return;
+  if(!confirm(`Convert ${q.num} to a Client PO for ${q.client}?`))return;
+  // Build CPO from quote
+  window._cpoEditId=null;
+  initCL();
+  const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
+  document.getElementById('cN').value=num;
+  document.getElementById('cDt').value=today();
+  document.getElementById('cCl').value=q.client;
+  document.getElementById('cSt').value='Received';
+  document.getElementById('cTm').value=q.terms||'Full Payment';
+  document.querySelector('#mCPO .mh h3').textContent='New Client PO (from '+q.num+')';
+  // Clear auto-added line and rebuild from quote lines
+  document.getElementById('cLines').innerHTML='';cLI=0;
+  (q.lines||[]).forEach(l=>{
+    addCLine();
+    const idx=cLI-1;
+    const descEl=document.getElementById('cDesc'+idx);
+    const qtyEl=document.getElementById('cQty'+idx);
+    const upEl=document.getElementById('cUP'+idx);
+    if(descEl)descEl.value=l.desc||'';
+    if(qtyEl)qtyEl.value=l.qty||1;
+    if(upEl){upEl.value=l.up||0;calcCLine(idx);}
+  });
+  if(!q.lines||!q.lines.length)addCLine();
+  calcCTotals();
+  // Mark quote as converted
+  q.status='Converted';
+  renderQuotes();
+  openModal('mCPO');
+  logA('🔄',`Quote ${q.num} converted to CPO for ${q.client}`);
+}
+
+// Shared quote HTML builder — used by both print and email popup
 function buildQuoteHTML(q){
   const vatEx=q.vatEx||+(q.total/1.12).toFixed(2);
   const vatAmt=q.vatAmt||+(vatEx*0.12).toFixed(2);
