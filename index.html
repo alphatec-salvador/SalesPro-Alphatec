@@ -1771,12 +1771,14 @@ function convertQuoteToCPO(id){
   const q=quotations.find(x=>x.id===id);if(!q)return;
   if(q.status!=='Approved'){alert('Please mark this quote as Approved before converting to a Client PO.');return;}
   if(!confirm('Convert '+q.num+' to a Client PO for '+q.client+'?\nAll line items will be pre-filled. You can review before saving.'))return;
-  // Build CPO from quote using correct CPO field IDs
+  // Reset CPO modal cleanly
   window._cpoEditId=null;
-  // Reset CPO modal — DON'T use initCL() as it adds a blank line
+  window._cpoFromQuote=q.num;
+  window._pendingConvertQuoteId=id;
   cLI=0;
   document.getElementById('cLines').innerHTML='';
-  ['cMP','cMS','cMT'].forEach(id=>document.getElementById(id).textContent='₱0');
+  ['cMP','cMS','cMT'].forEach(eid=>document.getElementById(eid).textContent='₱0');
+  // Fill header fields
   const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
   document.getElementById('cN').value=num;
   document.getElementById('cDt').value=today();
@@ -1784,27 +1786,35 @@ function convertQuoteToCPO(id){
   document.getElementById('cSt').value='Received';
   document.getElementById('cTm').value=q.terms||'Full Payment';
   document.querySelector('#mCPO .mh h3').textContent='New Client PO — from '+q.num;
-  // Store linked quote ref
-  window._cpoFromQuote=q.num;
-  // Rebuild lines from quote — using same pattern as editCPO which works correctly
-  if(q.lines&&q.lines.length){
-    q.lines.forEach(l=>{
-      addCLine();
-      const i=cLI; // after ++cLI inside addCLine, cLI = current row index
-      if(document.getElementById('cLD'+i))document.getElementById('cLD'+i).value=l.desc||'';
-      if(document.getElementById('cLT'+i))document.getElementById('cLT'+i).value='product';
-      if(document.getElementById('cLQ'+i))document.getElementById('cLQ'+i).value=l.qty||1;
-      if(document.getElementById('cLP'+i))document.getElementById('cLP'+i).value=l.up||0;
-      if(document.getElementById('cLA'+i))document.getElementById('cLA'+i).value=((+l.qty||1)*(+l.up||0)).toFixed(2);
-    });
-    calcCT();
+  // Add all lines first
+  const lines=q.lines&&q.lines.length?q.lines:[];
+  if(lines.length){
+    lines.forEach(l=>addCLine());
   } else {
     addCLine();
   }
-  // Mark quote as converted AFTER user saves the CPO (via hook in saveCPO)
-  window._pendingConvertQuoteId=id;
+  // Open modal first so DOM is live
   openModal('mCPO');
-  logA('🔄','Quote '+q.num+' → CPO modal opened for '+q.client);
+  // Then fill values after DOM is rendered — use setTimeout to let modal render
+  setTimeout(()=>{
+    if(lines.length){
+      lines.forEach((l,idx)=>{
+        const i=idx+1; // cLI starts at 1 (uses ++cLI)
+        const descEl=document.getElementById('cLD'+i);
+        const selEl=document.getElementById('cLSel'+i);
+        const typeEl=document.getElementById('cLT'+i);
+        const qtyEl=document.getElementById('cLQ'+i);
+        const priceEl=document.getElementById('cLP'+i);
+        if(selEl)selEl.style.display='none'; // hide catalog dropdown for clarity
+        if(descEl){descEl.value=l.desc||'';descEl.style.fontWeight='600';}
+        if(typeEl)typeEl.value='product';
+        if(qtyEl)qtyEl.value=l.qty||1;
+        if(priceEl)priceEl.value=l.up||0;
+      });
+      calcCT(); // recalculate totals after all fields are filled
+    }
+    logA('🔄','Quote '+q.num+' → CPO modal opened for '+q.client);
+  },80);
 }
 
 // Shared quote HTML builder — used by both print and email popup
