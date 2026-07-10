@@ -1770,51 +1770,49 @@ function approveQuote(id){
 function convertQuoteToCPO(id){
   const q=quotations.find(x=>x.id===id);if(!q)return;
   if(q.status!=='Approved'){alert('Please mark this quote as Approved before converting to a Client PO.');return;}
-  if(!confirm('Convert '+q.num+' to a Client PO for '+q.client+'?\nAll line items will be pre-filled. You can review before saving.'))return;
-  // Reset CPO modal cleanly
+  if(!confirm('Convert '+q.num+' to a Client PO for '+q.client+'?\nAll line items will be pre-filled.'))return;
+  // Store refs before opening modal
   window._cpoEditId=null;
   window._cpoFromQuote=q.num;
   window._pendingConvertQuoteId=id;
-  cLI=0;
-  document.getElementById('cLines').innerHTML='';
-  ['cMP','cMS','cMT'].forEach(eid=>document.getElementById(eid).textContent='₱0');
-  // Fill header fields
-  const num=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
-  document.getElementById('cN').value=num;
+  window._convertQuoteLines=q.lines||[];
+  // Fill header fields (modal already in DOM, just hidden)
+  document.getElementById('cN').value=peekNum(document.getElementById('cpoPrefix')?.value||'CPO');
   document.getElementById('cDt').value=today();
   document.getElementById('cCl').value=q.client;
   document.getElementById('cSt').value='Received';
   document.getElementById('cTm').value=q.terms||'Full Payment';
   document.querySelector('#mCPO .mh h3').textContent='New Client PO — from '+q.num;
-  // Add all lines first
-  const lines=q.lines&&q.lines.length?q.lines:[];
-  if(lines.length){
-    lines.forEach(l=>addCLine());
-  } else {
-    addCLine();
-  }
-  // Open modal first so DOM is live
+  // Open modal (this sets up datalists etc)
   openModal('mCPO');
-  // Then fill values after DOM is rendered — use setTimeout to let modal render
+  // After modal is open and DOM is live, reset lines and fill from quote
   setTimeout(()=>{
-    if(lines.length){
-      lines.forEach((l,idx)=>{
-        const i=idx+1; // cLI starts at 1 (uses ++cLI)
-        const descEl=document.getElementById('cLD'+i);
-        const selEl=document.getElementById('cLSel'+i);
-        const typeEl=document.getElementById('cLT'+i);
-        const qtyEl=document.getElementById('cLQ'+i);
-        const priceEl=document.getElementById('cLP'+i);
-        if(selEl)selEl.style.display='none'; // hide catalog dropdown for clarity
-        if(descEl){descEl.value=l.desc||'';descEl.style.fontWeight='600';}
-        if(typeEl)typeEl.value='product';
-        if(qtyEl)qtyEl.value=l.qty||1;
-        if(priceEl)priceEl.value=l.up||0;
+    // Fully reset line items area
+    cLI=0;
+    document.getElementById('cLines').innerHTML='';
+    ['cMP','cMS','cMT'].forEach(eid=>{const el=document.getElementById(eid);if(el)el.textContent='₱0';});
+    const qlines=window._convertQuoteLines;
+    if(qlines&&qlines.length){
+      qlines.forEach(l=>{
+        addCLine(); // increments cLI
+        const i=cLI;
+        const sel=document.getElementById('cLSel'+i);
+        const desc=document.getElementById('cLD'+i);
+        const type=document.getElementById('cLT'+i);
+        const qty=document.getElementById('cLQ'+i);
+        const price=document.getElementById('cLP'+i);
+        if(sel)sel.style.display='none';
+        if(desc){desc.value=l.desc||'';desc.style.fontWeight='600';}
+        if(type)type.value='product';
+        if(qty)qty.value=l.qty||1;
+        if(price)price.value=l.up||0;
       });
-      calcCT(); // recalculate totals after all fields are filled
+    } else {
+      addCLine();
     }
-    logA('🔄','Quote '+q.num+' → CPO modal opened for '+q.client);
-  },80);
+    calcCT();
+    logA('🔄','Quote '+q.num+' → CPO opened for '+q.client);
+  },100);
 }
 
 // Shared quote HTML builder — used by both print and email popup
