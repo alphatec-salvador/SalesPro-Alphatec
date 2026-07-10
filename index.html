@@ -1390,6 +1390,22 @@ function getDashDateRange(){const now=new Date(),yr=now.getFullYear();if(dashRan
 function printInvoice(invId){
   const inv=invoices.find(i=>i.id===invId);if(!inv)return;
   const cpo=clientPOs.find(p=>p.num===inv.poRef);
+  // Build line rows from CPO lines if available, else fallback to summary
+  const lineRows=cpo&&cpo.lines&&cpo.lines.length
+    ? cpo.lines.map((ln,i)=>`<tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem">${i+1}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem">${ln.desc||'—'}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:center">${ln.qty||1}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right">${fmt(ln.price||0)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem;text-align:right;font-weight:600">${fmt(ln.amount||0)}</td>
+      </tr>`).join('')
+    : `<tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">1</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9">Services Rendered${inv.poRef?' ('+inv.poRef+')':''}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:center">1</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right">—</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${fmt(inv.amount)}</td>
+      </tr>`;
   document.getElementById('printDocContent').innerHTML=`
     <div class="print-doc">
       <div class="doc-header">
@@ -1397,13 +1413,19 @@ function printInvoice(invId){
         <div class="doc-meta"><h3 style="color:#1d4ed8">SALES INVOICE</h3><p style="font-size:1rem;font-weight:700;color:#1e293b">${inv.num}</p><p>Date: ${inv.date}</p><p>Due: ${inv.due}</p><p>Terms: ${inv.terms||'—'}</p></div>
       </div>
       <div class="doc-parties">
-        <div class="doc-party"><h4>Bill To</h4><p style="font-weight:700;font-size:.95rem">${inv.client}</p>${cpo?`<p>${cpo.terms} payment terms</p>`:''}  </div>
+        <div class="doc-party"><h4>Bill To</h4><p style="font-weight:700;font-size:.95rem">${inv.client}</p>${cpo?`<p>${cpo.terms} payment terms</p>`:''}</div>
         <div class="doc-party"><h4>Reference</h4><p>Client PO: <strong>${inv.poRef||'—'}</strong></p><p>Invoice Status: <strong style="color:${inv.balance===0?'#16a34a':'#d97706'}">${inv.status}</strong></p></div>
       </div>
-      <table class="doc-table"><thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody>
-        ${cpo?`<tr><td>Product Sales (CPO ${inv.poRef})</td><td style="text-align:right">${fmt(cpo.prodTotal)}</td></tr><tr><td>Service Revenue (CPO ${inv.poRef})</td><td style="text-align:right">${fmt(cpo.svcTotal)}</td></tr>`:`<tr><td>Services Rendered</td><td style="text-align:right">${fmt(inv.amount)}</td></tr>`}
-      </tbody></table>
+      <table class="doc-table">
+        <thead><tr>
+          <th style="width:36px">#</th>
+          <th>Description</th>
+          <th style="text-align:center;width:50px">Qty</th>
+          <th style="text-align:right;width:110px">Unit Price</th>
+          <th style="text-align:right;width:120px">Amount</th>
+        </tr></thead>
+        <tbody>${lineRows}</tbody>
+      </table>
       <div class="doc-total-box">
         <div class="total-row"><span>Invoice Amount</span><span>${fmt(inv.amount)}</span></div>
         <div class="total-row"><span>Amount Paid</span><span style="color:#16a34a">(${fmt(inv.paid)})</span></div>
