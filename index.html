@@ -1432,8 +1432,8 @@ function printSupplierPO(spoId){
     lineRows=spo.lines.map((l,i)=>{
       const desc=l.desc||l.description||`Item ${i+1}`;
       const qty=+l.qty||1;
-      const up=+l.unitCost||+l.pc||+l.up||0;
-      const total=+l.total||+(qty*up).toFixed(2);
+      const up=+l.price||+l.unitCost||+l.pc||+l.up||0;
+      const total=+l.amount||+l.total||+(qty*up).toFixed(2);
       subtotal+=total;
       return`<tr>
         <td style="padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:.82rem">${i+1}</td>
