@@ -785,6 +785,16 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
       </div>
     </div>
   </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><div><h3>💰 Financial Statement Settings</h3><p>Used in Cash Flow, Balance Sheet, and Dashboard Financing/Investing CF</p></div><button class="btn btn-success btn-sm" onclick="saveFinSettings()">Save</button></div>
+    <div class="card-body">
+      <div class="alert ai">💡 These figures feed the Financing and Investing sections of your Cash Flow Statement — update them to reflect your real paid-in capital and fixed assets.</div>
+      <div class="g3">
+        <div class="fg"><label>Paid-in Capital (₱)</label><input class="fc" type="number" id="setPaidInCapital" value="1500000" min="0"/></div>
+        <div class="fg"><label>Fixed Assets — Net Book Value (₱)</label><input class="fc" type="number" id="setFixedAssets" value="885000" min="0"/></div>
+      </div>
+    </div>
+  </div>
   <div class="card">
     <div class="card-header"><div><h3>📁 Expense Categories</h3></div><button class="btn btn-primary btn-sm" onclick="openModal('mCatMgr')">Manage</button></div>
     <div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>Icon</th><th>Category</th><th>Color</th><th>Monthly Budget</th><th></th></tr></thead><tbody id="catSettingsTbl"></tbody></table></div></div>
@@ -1190,6 +1200,16 @@ function getAgingBuckets(t){return t==='ap'&&!agingCfg.apSameAsAR?agingCfg.ap:ag
 function agingLabel(days,bkts){if(days<=0)return{l:'Current',c:'acc'};if(days<=bkts[0])return{l:`1-${bkts[0]}d`,c:'ac30'};if(days<=bkts[1])return{l:`${bkts[0]+1}-${bkts[1]}d`,c:'ac60'};if(days<=bkts[2])return{l:`${bkts[1]+1}-${bkts[2]}d`,c:'ac90'};return{l:`${bkts[2]}d+`,c:'acov'};}
 function aging(r,t='ar'){if(r.balance===0)return{l:'Paid',c:'acc',days:0};const d=dd(today(),r.dueDate||today());if(d<=0)return{l:'Current',c:'acc',days:Math.abs(d)};return{...agingLabel(d,getAgingBuckets(t)),days:d};}
 function agingBadgeClass(ag){return{acc:'bg',ac30:'bb',ac60:'ba',ac90:'br',acov:'br'}[ag.c]||'bgr';}
+function saveFinSettings(){
+  const fa=+document.getElementById('setFixedAssets').value||0;
+  const pic=+document.getElementById('setPaidInCapital').value||0;
+  appSettings.fixedAssets=fa;appSettings.paidInCapital=pic;
+  if(window.sbSave)window.sbSave('app_settings',{id:1,fixed_assets:fa,paid_in_capital:pic});
+  logA('⚙️','Financial settings updated: Fixed Assets '+fmt(fa)+', Paid-in Capital '+fmt(pic));
+  try{refreshDash();}catch(e){}
+  try{renderFinancials();}catch(e){}
+  alert('✅ Financial settings saved!');
+}
 function saveAgingSettings(){const a1=+document.getElementById('arAg1').value||30,a2=+document.getElementById('arAg2').value||60,a3=+document.getElementById('arAg3').value||90;agingCfg.ar=[a1,a2,a3];agingCfg.ap=[...agingCfg.ar];document.getElementById('arAg4Label').value=`${a3}+ Days (Critical)`;updateAgingPreview();logA('⚙️','Aging thresholds updated');alert('✅ Aging settings saved!');}
 function updateAgingPreview(){const[a1,a2,a3]=agingCfg.ar;document.getElementById('agingPreview').textContent=`Current → 1-${a1}d → ${a1+1}-${a2}d → ${a2+1}-${a3}d → ${a3}d+ (Critical)`;}
 function toggleAPAging(){agingCfg.apSameAsAR=document.getElementById('apSameAsAR').checked;}
@@ -1320,7 +1340,8 @@ const totARBal=()=>arRecords.reduce((a,r)=>a+r.balance,0);
 const totAPPaid=()=>apRecords.reduce((a,r)=>a+r.paid,0);
 const totAPBal=()=>apRecords.reduce((a,r)=>a+r.balance,0);
 const netCash=()=>totARPaid()-totAPPaid()-totOPEX();
-const totFixedAssets=()=>885000;const totEquity=()=>1500000;
+let appSettings={fixedAssets:885000,paidInCapital:1500000};
+const totFixedAssets=()=>appSettings.fixedAssets;const totEquity=()=>appSettings.paidInCapital;
 function inRange(ds,from,to){if(!ds)return false;try{const d=new Date(ds+'T00:00:00');return d>=from&&d<=to;}catch(e){return false;}}
 function filteredCPOs(f,t){return clientPOs.filter(p=>inRange(p.date,f,t));}
 function filteredSPOs(f,t){return supplierPOs.filter(p=>p.status!=='Cancelled'&&inRange(p.date,f,t));}
@@ -2818,6 +2839,10 @@ window.sbLoadAll=async function(){
   await loadInto('invoices',invoices,r=>({id:r.id,num:r.invoice_number,poRef:r.po_ref||'',client:r.client_name,date:r.date||'',due:r.due_date||'',terms:r.terms||'',amount:+r.total_amount||0,paid:+r.amount_paid||0,balance:(+r.total_amount||0)-(+r.amount_paid||0),status:r.status||''}));
   await loadInto('expenses',expenses,r=>({id:r.id,ref:r.ref,date:r.date||'',month:r.month||'',cat:r.category||'',desc:r.description||'',payee:r.payee||'',tin:r.tin_number||'',amount:+r.amount||0,vatable:+r.vatable_amount||0,vat:+r.vat_amount||0,vatExempt:+r.vat_exempt||0,mode:r.payment_mode||'',status:r.status||'Pending'}));
   await loadInto('quotations',quotations,r=>({id:r.id,num:r.quote_number,client:r.client_name,date:r.date||'',validUntil:r.valid_until||'',terms:r.terms||'',remarks:r.remarks||'',status:r.status||'Draft',lines:typeof r.lines==='string'?JSON.parse(r.lines||'[]'):(r.lines||[]),total:+r.total_amount||0,vatEx:+r.vat_ex||0,vatAmt:+r.vat_amt||0,vatInc:+r.vat_inc||0}));
+  try{
+    const{data:asData,error:asErr}=await window._sbDb.from('app_settings').select('*').eq('id',1).maybeSingle();
+    if(!asErr&&asData){appSettings.fixedAssets=+asData.fixed_assets||appSettings.fixedAssets;appSettings.paidInCapital=+asData.paid_in_capital||appSettings.paidInCapital;}
+  }catch(e){console.warn('[SB] skip app_settings',e.message);}
 
   // Rebuild derived arrays
   arRecords.splice(0,arRecords.length);
@@ -2860,6 +2885,7 @@ window.sbLoadAll=async function(){
       try{updateBadges();}catch(e){}
       try{updateNumPreviews();}catch(e){}
       try{buildMonthSel();}catch(e){}
+      try{const _fa=document.getElementById('setFixedAssets');if(_fa)_fa.value=appSettings.fixedAssets;const _pic=document.getElementById('setPaidInCapital');if(_pic)_pic.value=appSettings.paidInCapital;}catch(e){}
     },100);
   }else{
     console.log('[SB] No data yet — ready for first entry');
