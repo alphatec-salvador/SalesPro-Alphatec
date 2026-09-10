@@ -2100,8 +2100,24 @@ let siLI=0;window._siEditId=null;
 // until the supplier's actual invoices are recorded, then it is replaced.
 function siIsPlaceholder(x){return !!x.autoMirror&&!((x.num||'').trim())&&(+x.paid||0)===0;}
 function siBilled(spoNum,exceptId){return supplierInvoices.filter(x=>x.spoNum===spoNum&&(!exceptId||x.id!==exceptId)&&!siIsPlaceholder(x)).reduce((a,x)=>a+(+x.amount||0),0);}
-function siQtyBilled(spoNum,desc,exceptId){if(!desc)return 0;return supplierInvoices.filter(x=>x.spoNum===spoNum&&(!exceptId||x.id!==exceptId)&&!siIsPlaceholder(x)).reduce((a,x)=>a+((x.lines||[]).filter(l=>(l.desc||'')===desc).reduce((b,l)=>b+(+l.qty||0),0)),0);}
-function fillSISPOSel(){const sel=document.getElementById('siSPO');if(!sel)return;const cur=sel.value;sel.innerHTML='<option value="">— Select Supplier PO —</option>'+supplierPOs.map(p=>{const rem=(+p.total||0)-siBilled(p.num);return `<option value="${p.num}">${p.num} — ${p.supplier} · PO ${fmt(p.total)}${rem>0.005?' · unbilled '+fmt(rem):' · fully billed'}</option>`;}).join('');sel.value=cur;}
+// The PO's billable lines, in a fixed order. Every caller uses this same list so
+// that a line's position means the same thing everywhere.
+function siPoLines(spo){return ((spo&&spo.lines)||[]).filter(l=>l&&(((l.desc||'').trim())||(+l.amount||0)>0));}
+function siLineIdx(l){return(l&&(l.poIdx===0||l.poIdx))?+l.poIdx:null;}
+// How much of one PO line has already been invoiced. Matched on the PO line's
+// position; description text is only a fallback for older saved invoices.
+function siQtyBilled(spoNum,poIdx,desc,exceptId){
+  const d=String(desc||'').trim().toLowerCase();
+  const want=(poIdx===0||poIdx)?+poIdx:null;
+  return supplierInvoices.filter(x=>x.spoNum===spoNum&&(!exceptId||x.id!==exceptId)&&!siIsPlaceholder(x))
+    .reduce((a,x)=>a+((x.lines||[]).reduce((b,l)=>{
+      if(!l)return b;
+      const li=siLineIdx(l);
+      const hit=(li!==null&&want!==null)?(li===want)
+               :(!!d&&String(l.desc||'').trim().toLowerCase()===d);
+      return hit?b+(+l.qty||0):b;
+    },0)),0);}
+function fillSISPOSel(){const sel=document.getElementById('siSPO');if(!sel)return;const cur=sel.value;sel.innerHTML='<option value="">— Select Supplier PO —</option>'+supplierPOs.map(p=>`<option value="${siEsc(p.num)}">${siEsc(p.num)}</option>`).join('');sel.value=cur;}
 function siCalcDue(){const days=TERMS_DAYS[document.getElementById('siTm').value]||0;const dt=document.getElementById('siDt').value;if(!dt)return;const d=new Date(dt);d.setDate(d.getDate()+days);document.getElementById('siDue').value=d.toISOString().slice(0,10);}
 function siEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function siCatOptions(){return '<option value="">— Select from catalog —</option>'+catalog.map(c=>`<option value="${c.id}" data-code="${siEsc(c.code)}" data-desc="${siEsc(c.desc)}" data-pc="${+c.pc||0}" data-sp="${+c.sp||0}">${siEsc(c.code)} — ${siEsc(c.desc)} (cost ${fmt(c.pc)} · sell ${fmt(c.sp)})</option>`).join('');}
@@ -2110,16 +2126,16 @@ function siLineOpt(i){const sel=document.getElementById('siLSel'+i);if(!sel||!se
 function siDescEdited(id){const opt=siLineOpt(id);if(!opt)return;const d=document.getElementById('siLD'+id);if(!d)return;if(String(opt.dataset.desc||'')!==d.value.trim()){const sel=document.getElementById('siLSel'+id);if(sel)sel.value='';}}
 function fillSILine(id){const opt=siLineOpt(id);if(!opt)return;const d=document.getElementById('siLD'+id);if(d)d.value=opt.dataset.desc||'';const c=document.getElementById('siLC'+id);if(c)c.value=+opt.dataset.pc||0;const q=document.getElementById('siLQ'+id);if(q&&!(+q.value))q.value=1;calcSIT();}
 function addSILine(pre){const id=++siLI;const d=document.createElement('div');d.className='si-grid li-body';d.id='siL'+id;
-  d.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><select class="fc" id="siLSel${id}" style="font-size:.72rem" onchange="fillSILine(${id})">${siCatOptions()}</select><input class="fc" id="siLD${id}" style="font-size:.75rem" placeholder="or type description" oninput="siDescEdited(${id})"/></div><input class="fc" id="siLO${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" id="siLB${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" type="number" step="any" value="0" id="siLQ${id}" oninput="calcSIT()"/><input class="fc" type="number" step="any" value="0" id="siLC${id}" oninput="calcSIT()"/><input class="fc" type="number" id="siLA${id}" readonly style="background:#f8fafc;font-weight:600"/><button class="btn btn-danger" onclick="this.closest('.li-body').remove();calcSIT()">✕</button>`;
+  d.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><select class="fc" id="siLSel${id}" style="font-size:.72rem" onchange="fillSILine(${id})">${siCatOptions()}</select><input class="fc" id="siLD${id}" style="font-size:.75rem" placeholder="or type description" oninput="siDescEdited(${id})"/><input type="hidden" id="siLP${id}"/></div><input class="fc" id="siLO${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" id="siLB${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" type="number" step="any" value="0" id="siLQ${id}" oninput="calcSIT()"/><input class="fc" type="number" step="any" value="0" id="siLC${id}" oninput="calcSIT()"/><input class="fc" type="number" id="siLA${id}" readonly style="background:#f8fafc;font-weight:600"/><button class="btn btn-danger" onclick="this.closest('.li-body').remove();calcSIT()">✕</button>`;
   document.getElementById('siLines').appendChild(d);
-  if(pre){document.getElementById('siLD'+id).value=pre.desc||'';document.getElementById('siLO'+id).value=(pre.ordered===''||pre.ordered==null)?'':pre.ordered;document.getElementById('siLB'+id).value=(pre.billed===''||pre.billed==null)?'':pre.billed;document.getElementById('siLQ'+id).value=pre.qty!=null?pre.qty:0;document.getElementById('siLC'+id).value=pre.price!=null?pre.price:0;const _c=siCatFind(pre.code,pre.desc);const _s=document.getElementById('siLSel'+id);if(_c&&_s)_s.value=_c.id;if(_c&&(pre.price==null||!(+pre.price)))document.getElementById('siLC'+id).value=+_c.pc||0;}
+  if(pre){document.getElementById('siLD'+id).value=pre.desc||'';document.getElementById('siLP'+id).value=(pre.poIdx===0||pre.poIdx)?pre.poIdx:'';document.getElementById('siLO'+id).value=(pre.ordered===''||pre.ordered==null)?'':pre.ordered;document.getElementById('siLB'+id).value=(pre.billed===''||pre.billed==null)?'':pre.billed;document.getElementById('siLQ'+id).value=pre.qty!=null?pre.qty:0;document.getElementById('siLC'+id).value=pre.price!=null?pre.price:0;const _c=siCatFind(pre.code,pre.desc);const _s=document.getElementById('siLSel'+id);if(_c&&_s)_s.value=_c.id;if(_c&&(pre.price==null||!(+pre.price)))document.getElementById('siLC'+id).value=+_c.pc||0;}
   calcSIT();return id;}
 function siPickSPO(){const num=document.getElementById('siSPO').value;const spo=supplierPOs.find(p=>p.num===num);document.getElementById('siLines').innerHTML='';siLI=0;
   if(!spo){document.getElementById('siBillPanel').innerHTML='';calcSIT();return;}
   document.getElementById('siSup').value=spo.supplier||'';
   if(!document.getElementById('siDt').value)document.getElementById('siDt').value=today();
   if(spo.terms)document.getElementById('siTm').value=spo.terms;
-  (spo.lines||[]).filter(l=>l&&((l.desc||'').trim()||(+l.amount||0))).forEach(l=>{const ordered=+l.qty||0;const billed=siQtyBilled(num,l.desc||'',window._siEditId);addSILine({desc:l.desc||'',code:l.code||'',ordered:ordered,billed:billed,qty:Math.max(0,ordered-billed),price:+l.price||0});});
+  siPoLines(spo).forEach((l,i)=>{const ordered=+l.qty||0;const billed=siQtyBilled(num,i,l.desc||'',window._siEditId);addSILine({desc:l.desc||'',code:l.code||'',poIdx:i,ordered:ordered,billed:billed,qty:Math.max(0,ordered-billed),price:+l.price||0});});
   if(!document.querySelector('#siLines .li-body'))addSILine({});
   siCalcDue();calcSIT();}
 function calcSIT(){let t=0;document.querySelectorAll('[id^=siLQ]').forEach(el=>{const i=el.id.replace('siLQ','');const c=document.getElementById('siLC'+i);if(!c)return;const v=(+el.value||0)*(+c.value||0);const a=document.getElementById('siLA'+i);if(a)a.value=v.toFixed(2);t+=v;});
@@ -2135,10 +2151,14 @@ function editSI(id){const x=supplierInvoices.find(v=>v.id===id);if(!x)return;win
   document.getElementById('siSPO').value=x.spoNum||'';document.getElementById('siNum').value=x.num||'';document.getElementById('siSup').value=x.supplier||'';
   document.getElementById('siDt').value=x.date||'';if(x.terms)document.getElementById('siTm').value=x.terms;document.getElementById('siDue').value=x.due||'';
   document.getElementById('siLines').innerHTML='';siLI=0;
-  const spo=supplierPOs.find(p=>p.num===x.spoNum);const ordMap={};((spo&&spo.lines)||[]).forEach(l=>{if(l&&l.desc)ordMap[l.desc]=(+l.qty||0);});
+  const spo=supplierPOs.find(p=>p.num===x.spoNum);const _po=siPoLines(spo);
+  const ordByIdx={};_po.forEach((l,i)=>{ordByIdx[i]=+l.qty||0;});
+  const ordByDesc={};_po.forEach(l=>{const k=String(l.desc||'').trim().toLowerCase();if(k&&ordByDesc[k]==null)ordByDesc[k]=+l.qty||0;});
   let src=(x.lines||[]).filter(l=>l&&(((l.desc||'').trim())||(+l.amount||0)>0));
   if(!src.length){const _amt=+x.amount||0;src=[{desc:'As per '+(x.spoNum||'Supplier PO')+' — total per purchase order',code:'',type:'product',qty:1,price:_amt,amount:_amt}];}
-  src.forEach(l=>addSILine({desc:l.desc||'',code:l.code||'',ordered:ordMap[l.desc]!=null?ordMap[l.desc]:'',billed:siQtyBilled(x.spoNum,l.desc||'',id),qty:+l.qty||0,price:+l.price||0}));
+  src.forEach(l=>{const li=siLineIdx(l);const k=String(l.desc||'').trim().toLowerCase();
+    const ordered=(li!==null&&ordByIdx[li]!=null)?ordByIdx[li]:(ordByDesc[k]!=null?ordByDesc[k]:'');
+    addSILine({desc:l.desc||'',code:l.code||'',poIdx:li,ordered:ordered,billed:siQtyBilled(x.spoNum,li,l.desc||'',id),qty:+l.qty||0,price:+l.price||0});});
   calcSIT();openModal('mSI');}
 function viewSI(id){const x=supplierInvoices.find(v=>v.id===id);if(!x)return;
   const spo=supplierPOs.find(p=>p.num===x.spoNum);
@@ -2187,7 +2207,7 @@ function saveSI(){
   const dup=supplierInvoices.find(x=>x.id!==window._siEditId&&(x.supplier||'').trim().toLowerCase()===sup.toLowerCase()&&(x.num||'').trim().toLowerCase()===num.toLowerCase());
   if(dup){alert('⚠️ '+sup+' already has an invoice numbered '+num+' on file (recorded against '+(dup.spoNum||'no PO')+').\n\nPlease check before saving.');return;}
   const lines=[];let tot=0;
-  document.querySelectorAll('[id^=siLQ]').forEach(el=>{const i=el.id.replace('siLQ','');const d=document.getElementById('siLD'+i);const c=document.getElementById('siLC'+i);if(!c)return;const q=+el.value||0,pr=+c.value||0,amt=q*pr;const _desc=d?d.value.trim():'';const _oRaw=siLineOpt(i);const _o=(_oRaw&&String(_oRaw.dataset.desc||'')===_desc)?_oRaw:null;const _cat=_o?null:siCatFind('',_desc);const _code=_o?(_o.dataset.code||''):(_cat?(_cat.code||''):'');const _sell=_o?(+_o.dataset.sp||0):(_cat?(+_cat.sp||0):0);if((_desc||amt)&&amt>0){lines.push({desc:_desc,code:_code,type:'product',qty:q,price:pr,sell:_sell,amount:amt});tot+=amt;}});
+  document.querySelectorAll('[id^=siLQ]').forEach(el=>{const i=el.id.replace('siLQ','');const d=document.getElementById('siLD'+i);const c=document.getElementById('siLC'+i);if(!c)return;const q=+el.value||0,pr=+c.value||0,amt=q*pr;const _desc=d?d.value.trim():'';const _oRaw=siLineOpt(i);const _o=(_oRaw&&String(_oRaw.dataset.desc||'')===_desc)?_oRaw:null;const _cat=_o?null:siCatFind('',_desc);const _code=_o?(_o.dataset.code||''):(_cat?(_cat.code||''):'');const _sell=_o?(+_o.dataset.sp||0):(_cat?(+_cat.sp||0):0);const _pEl=document.getElementById('siLP'+i);const _pRaw=_pEl?String(_pEl.value):'';const _pIdx=(_pRaw!==''&&!isNaN(+_pRaw))?+_pRaw:null;if((_desc||amt)&&amt>0){const _ln={desc:_desc,code:_code,type:'product',qty:q,price:pr,sell:_sell,amount:amt};if(_pIdx!==null)_ln.poIdx=_pIdx;lines.push(_ln);tot+=amt;}});
   if(!lines.length||tot<=0){alert('Please enter at least one delivered line with a quantity and a unit cost.');return;}
   const spo=supplierPOs.find(p=>p.num===spoNum);
   const prior=siBilled(spoNum,window._siEditId);
