@@ -116,6 +116,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
 .mb2{padding:5px 12px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;color:#64748b}
 .mb2.active{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .li-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 36px;gap:6px;padding:7px 12px;align-items:center}
+.si-grid{display:grid;grid-template-columns:2.2fr .8fr .9fr 1fr 1fr 1fr 36px;gap:6px;padding:7px 12px;align-items:center}
 .li-head{background:#f8fafc;font-size:.65rem;font-weight:700;color:#64748b;text-transform:uppercase;border-bottom:1px solid #e2e8f0}
 .li-body{border-top:1px solid #f1f5f9}
 .job-cost-panel{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:10px;font-size:.8rem}
@@ -266,6 +267,7 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <div class="nav-section">
     <div class="nav-label">Purchasing</div>
     <div class="nav-item" data-roles="admin,operations,finance" onclick="nav('supplierpo',this)"><span class="icon" style="width:20px;height:20px;background:#fffbeb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">🛒</span>Supplier POs<span class="nb nb-amber" id="nbS">5</span></div>
+    <div class="nav-item" data-roles="admin,operations,finance" onclick="nav('supplierinv',this)"><span class="icon" style="width:20px;height:20px;background:#fef2f2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px">📄</span>Supplier Invoices<span class="nb nb-amber" id="nbSI">0</span></div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Finance</div>
@@ -671,6 +673,18 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
   <tfoot><tr><td colspan="4">TOTAL COGS</td><td id="sFT">₱0</td><td colspan="3"></td></tr></tfoot></table></div></div>
 </div>
 
+<!-- Supplier Invoices -->
+<div class="page" id="pg-supplierinv">
+  <div class="ph"><div><h2>Supplier Invoices</h2><p>One Supplier PO can carry several invoices — one per actual delivery</p></div><div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="openNewSI()">+ New Supplier Invoice</button></div></div>
+  <div class="toolbar">
+    <input type="text" placeholder="🔍 Search invoice no., supplier or PO..." id="siSrch" oninput="renderSI()"/>
+    <select id="siStF" onchange="renderSI()"><option value="">All Status</option><option>Outstanding</option><option>Partially Paid</option><option>Paid</option></select>
+    <select id="siSupF" onchange="renderSI()"><option value="">All Suppliers</option></select>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Invoice No.</th><th>Supplier</th><th>Supplier PO</th><th>Invoice Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody id="siTbl"></tbody>
+  <tfoot><tr><td colspan="5">TOTALS</td><td id="siFA">₱0</td><td id="siFP">₱0</td><td id="siFB">₱0</td><td colspan="2"></td></tr></tfoot></table></div></div>
+</div>
+
 <!-- AR -->
 <div class="page" id="pg-ar">
   <div class="ph"><div><h2>Accounts Receivable</h2></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="exportExcel('ar')">⬇ Export Excel</button><button class="btn btn-primary" onclick="openModal('mAR')">+ Log Payment</button></div></div>
@@ -1011,6 +1025,30 @@ tfoot td{padding:9px 12px;font-weight:700;color:#1e293b;background:#f8fafc;borde
     <div id="jobCostPreview"></div>
   </div>
   <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mSPO')">Cancel</button><button class="btn btn-primary" onclick="saveSPO()">Save Supplier PO</button></div>
+</div></div>
+
+<!-- Supplier Invoice -->
+<div class="modal-overlay" id="mSI"><div class="modal" style="width:920px">
+  <div class="mh"><div><h3 id="siTitle">New Supplier Invoice</h3><p>Record the supplier's own invoice for what was actually delivered</p></div><button class="mc" onclick="closeModal('mSI')">✕</button></div>
+  <div class="mb">
+    <div class="g3">
+      <div class="fg"><label>Supplier PO</label><select class="fc" id="siSPO" onchange="siPickSPO()"><option value="">— Select Supplier PO —</option></select></div>
+      <div class="fg"><label>Supplier Invoice No.</label><input class="fc" id="siNum" style="font-weight:700;color:#d97706" placeholder="as printed on the invoice"/></div>
+      <div class="fg"><label>Supplier</label><input class="fc" id="siSup"/></div>
+      <div class="fg"><label>Invoice Date</label><input class="fc" id="siDt" type="date" onchange="siCalcDue()"/></div>
+      <div class="fg"><label>Payment Terms</label><select class="fc" id="siTm" onchange="siCalcDue()"><option>Cash on Delivery (COD)</option><option>Full Payment</option><option>PDC</option><option>Net 15</option><option>Net 30</option><option>Net 45</option><option>Net 60</option><option>Net 90</option><option>Installment</option></select></div>
+      <div class="fg"><label>Due Date</label><input class="fc" id="siDue" type="date"/></div>
+    </div>
+    <hr class="divider"/>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong style="font-size:.8rem">Delivered on this invoice</strong><button class="btn btn-ghost btn-sm" onclick="addSILine()">+ Add Line</button></div>
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+      <div class="si-grid li-head"><span>Description</span><span style="text-align:right">Ordered</span><span style="text-align:right">Already billed</span><span style="text-align:right">Qty this delivery</span><span style="text-align:right">Unit Cost (₱)</span><span style="text-align:right">Amount</span><span></span></div>
+      <div id="siLines"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:8px 12px;border-top:1px solid #e2e8f0;background:#f8fafc;font-size:.8rem;font-weight:700">Invoice Total:<strong id="siMT" style="margin-left:8px;color:#d97706">₱0</strong></div>
+    <div id="siBillPanel"></div>
+  </div>
+  <div class="mf"><button class="btn btn-ghost" onclick="closeModal('mSI')">Cancel</button><button class="btn btn-primary" onclick="saveSI()">Save Supplier Invoice</button></div>
 </div></div>
 
 <!-- Invoice -->
@@ -1355,7 +1393,7 @@ function nav(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('pg-'+id).classList.add('active');el.classList.add('active');
-  ({dashboard:refreshDash,catalog:()=>{renderCatalog();},leads:renderLeads,quotations:renderQuotes,clientpo:renderCPO,invoices:()=>{fillInvPOSel();renderInv();},supplierpo:()=>{fillSPOLinked();renderSPO();},ar:()=>{fillARSel();renderAR();renderARCh();},ap:()=>{fillAPSel();renderAP();renderAPCh();},expenses:()=>{renderExp();renderExpCh();},financials:renderFinancials,settings:()=>{updateAgingPreview();renderCatSettingsTbl();updateNumPreviews();}})[id]?.();
+  ({dashboard:refreshDash,catalog:()=>{renderCatalog();},leads:renderLeads,quotations:renderQuotes,clientpo:renderCPO,invoices:()=>{fillInvPOSel();renderInv();},supplierpo:()=>{fillSPOLinked();renderSPO();},supplierinv:()=>{fillSISPOSel();renderSI();},ar:()=>{fillARSel();renderAR();renderARCh();},ap:()=>{fillAPSel();renderAP();renderAPCh();},expenses:()=>{renderExp();renderExpCh();},financials:renderFinancials,settings:()=>{updateAgingPreview();renderCatSettingsTbl();updateNumPreviews();}})[id]?.();
 }
 function fsTab(id,el){document.querySelectorAll('.fs-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.fs-page').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('fs-'+id).classList.add('active');if(id==='ch')renderFSCharts();}
 
@@ -2047,6 +2085,92 @@ function renderCPO(){
 function saveSPO(){const n=document.getElementById('sN').value.trim(),sup=document.getElementById('sSup').value.trim();if(!n||!sup)return;let tot=0;const lines=[];document.querySelectorAll('[id^=sLA]').forEach(el=>{const i=el.id.replace('sLA','');const t=document.getElementById('sLT'+i);const d=document.getElementById('sLD'+i);const q=document.getElementById('sLQ'+i);const pr=document.getElementById('sLC'+i);tot+=+el.value||0;if((d&&d.value)||+el.value)lines.push({desc:d?d.value:'',type:t?t.value:'product',qty:q?+q.value:1,price:pr?+pr.value:0,amount:+el.value||0});});const sTm=document.getElementById('sTm')?.value||'Full Payment';const sDue=document.getElementById('sDue')?.value||'';const editId=window._spoEditId||null;if(editId){const idx=supplierPOs.findIndex(x=>x.id===editId);if(idx>-1){const old=supplierPOs[idx];supplierPOs[idx]={...old,num:n,supplier:sup,linked:document.getElementById('sLnk').value,date:document.getElementById('sDt').value,delivery:document.getElementById('sDel')?.value,terms:sTm,due:sDue,status:document.getElementById('sSt').value,total:tot,balance:tot-old.paid,lines:lines.length?lines:old.lines};const _sis=supplierInvoices.filter(x=>x.spoNum===old.num);if(_sis.length===1&&_sis[0].autoMirror){const _si=_sis[0];_si.spoNum=n;_si.supplier=sup;_si.date=supplierPOs[idx].date;_si.due=sDue||supplierPOs[idx].date;_si.terms=sTm;_si.amount=tot;_si.balance=Math.max(0,tot-(+_si.paid||0));_si.lines=supplierPOs[idx].lines||[];window.siSave(_si);}else if(_sis.length){_sis.forEach(x=>{x.spoNum=n;x.supplier=sup;window.siSave(x);});}const apIdx=apRecords.findIndex(a=>a.spoNum===old.num);if(apIdx>-1){apRecords[apIdx]={...apRecords[apIdx],spoNum:n,supplier:sup,amount:tot,dueDate:sDue||supplierPOs[idx].date,balance:tot-apRecords[apIdx].paid};}logA('🛒',`SPO updated: ${n}`);if(window.sbSave)window.sbSave('supplier_pos',{id:editId,po_number:n,supplier_name:sup,linked_cpo:document.getElementById('sLnk').value||null,date:document.getElementById('sDt').value||null,delivery:document.getElementById('sDel')?.value||null,terms:sTm,due_date:sDue||null,status:document.getElementById('sSt').value,lines:JSON.stringify(supplierPOs[idx].lines||[]),total_amount:tot,paid:old.paid||0,balance:tot-(old.paid||0)});}window._spoEditId=null;}else{const pf=document.getElementById('spoPrefix')?.value||'SPO';seqCounters[pf]=seqCounters[pf]||seqCounters['SPO'];seqCounters[pf]++;const spo={id:++idS,num:n,supplier:sup,linked:document.getElementById('sLnk').value,date:document.getElementById('sDt').value,delivery:document.getElementById('sDel')?.value,terms:sTm,due:sDue,status:document.getElementById('sSt').value,lines:lines.length?lines:[{type:'product'}],total:tot,paid:0,balance:tot};supplierPOs.push(spo);const _mi={id:idSI++,num:'',spoNum:n,supplier:sup,date:spo.date,due:sDue||spo.date,terms:sTm,status:'Outstanding',lines:spo.lines||[],amount:tot,paid:0,balance:tot,autoMirror:true};supplierInvoices.push(_mi);window.siSave(_mi);apRecords.push({id:++idAP,ref:'AP-'+idAP.toString().padStart(6,'0'),spoNum:n,supplier:sup,billDate:spo.date,dueDate:sDue||spo.date,terms:sTm,amount:tot,paid:0,balance:tot,status:'Outstanding'});logA('🛒',`SPO ${n} — ${sup} → ${spo.linked||'no link'} — ${fmt(tot)}`);if(window.sbSave)window.sbSave('supplier_pos',{id:spo.id,po_number:spo.num,supplier_name:spo.supplier,linked_cpo:spo.linked||null,date:spo.date||null,delivery:spo.delivery||null,terms:sTm,due_date:sDue||null,status:spo.status,lines:JSON.stringify(spo.lines||[]),total_amount:spo.total||0,paid:0,balance:spo.total||0});}closeModal('mSPO');setTimeout(()=>{renderSPO();renderCPO();updateBadges();window.sbRebuildAR();refreshDash();},10);}
 function renderSPO(){const s=(document.getElementById('sSrch').value||'').toLowerCase(),st=document.getElementById('sStF').value;const f=supplierPOs.filter(p=>(!s||(p.num+p.supplier).toLowerCase().includes(s))&&(!st||p.status===st));  document.getElementById('spoTbl').innerHTML=f.length?f.map(p=>`<tr><td style="font-weight:600;color:#d97706">${p.num}</td><td>${p.supplier}</td><td>${p.linked?`<span class="badge bb">${p.linked}</span>`:'—'}</td><td>${p.date||'—'}</td><td style="font-weight:700;color:#d97706">${fmt(p.total)}</td><td style="font-size:.72rem">${p.lines.some(l=>l.type==='product')?'📦':''} ${p.lines.some(l=>l.type==='service')?'⚙️':''}</td><td><span class="badge ${sbMap[p.status]||'bgr'}">${p.status}</span></td><td style="display:flex;gap:4px;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="viewSPO(${p.id})">👁 View</button><button class="btn btn-ghost btn-sm" onclick="editSPO(${p.id})">✏️</button><button class="btn btn-ghost btn-sm" onclick="printSupplierPO(${p.id})">🖨️</button><button class="btn btn-danger" onclick="deleteSPO(${p.id})">✕</button></td></tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No Supplier POs.</td></tr>`;document.getElementById('sFT').textContent=fmt(f.reduce((a,p)=>a+p.total,0));}
 
+// ── SUPPLIER INVOICES ─────────────────────────────────────
+let siLI=0;window._siEditId=null;
+// A "placeholder" is the provisional bill auto-created from a Supplier PO:
+// no real invoice number and no payments yet. It stands in for the PO in AP
+// until the supplier's actual invoices are recorded, then it is replaced.
+function siIsPlaceholder(x){return !!x.autoMirror&&!((x.num||'').trim())&&(+x.paid||0)===0;}
+function siBilled(spoNum,exceptId){return supplierInvoices.filter(x=>x.spoNum===spoNum&&(!exceptId||x.id!==exceptId)&&!siIsPlaceholder(x)).reduce((a,x)=>a+(+x.amount||0),0);}
+function siQtyBilled(spoNum,desc,exceptId){if(!desc)return 0;return supplierInvoices.filter(x=>x.spoNum===spoNum&&(!exceptId||x.id!==exceptId)&&!siIsPlaceholder(x)).reduce((a,x)=>a+((x.lines||[]).filter(l=>(l.desc||'')===desc).reduce((b,l)=>b+(+l.qty||0),0)),0);}
+function fillSISPOSel(){const sel=document.getElementById('siSPO');if(!sel)return;const cur=sel.value;sel.innerHTML='<option value="">— Select Supplier PO —</option>'+supplierPOs.map(p=>{const rem=(+p.total||0)-siBilled(p.num);return `<option value="${p.num}">${p.num} — ${p.supplier} · PO ${fmt(p.total)}${rem>0.005?' · unbilled '+fmt(rem):' · fully billed'}</option>`;}).join('');sel.value=cur;}
+function siCalcDue(){const days=TERMS_DAYS[document.getElementById('siTm').value]||0;const dt=document.getElementById('siDt').value;if(!dt)return;const d=new Date(dt);d.setDate(d.getDate()+days);document.getElementById('siDue').value=d.toISOString().slice(0,10);}
+function addSILine(pre){const id=++siLI;const d=document.createElement('div');d.className='si-grid li-body';d.id='siL'+id;
+  d.innerHTML=`<input class="fc" id="siLD${id}" style="font-size:.75rem" placeholder="description"/><input class="fc" id="siLO${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" id="siLB${id}" readonly style="background:#f8fafc;font-size:.72rem;text-align:right"/><input class="fc" type="number" step="any" value="0" id="siLQ${id}" oninput="calcSIT()"/><input class="fc" type="number" step="any" value="0" id="siLC${id}" oninput="calcSIT()"/><input class="fc" type="number" id="siLA${id}" readonly style="background:#f8fafc;font-weight:600"/><button class="btn btn-danger" onclick="this.closest('.li-body').remove();calcSIT()">✕</button>`;
+  document.getElementById('siLines').appendChild(d);
+  if(pre){document.getElementById('siLD'+id).value=pre.desc||'';document.getElementById('siLO'+id).value=(pre.ordered===''||pre.ordered==null)?'':pre.ordered;document.getElementById('siLB'+id).value=(pre.billed===''||pre.billed==null)?'':pre.billed;document.getElementById('siLQ'+id).value=pre.qty!=null?pre.qty:0;document.getElementById('siLC'+id).value=pre.price!=null?pre.price:0;}
+  calcSIT();return id;}
+function siPickSPO(){const num=document.getElementById('siSPO').value;const spo=supplierPOs.find(p=>p.num===num);document.getElementById('siLines').innerHTML='';siLI=0;
+  if(!spo){document.getElementById('siBillPanel').innerHTML='';calcSIT();return;}
+  document.getElementById('siSup').value=spo.supplier||'';
+  if(!document.getElementById('siDt').value)document.getElementById('siDt').value=today();
+  if(spo.terms)document.getElementById('siTm').value=spo.terms;
+  (spo.lines||[]).filter(l=>l&&((l.desc||'').trim()||(+l.amount||0))).forEach(l=>{const ordered=+l.qty||0;const billed=siQtyBilled(num,l.desc||'',window._siEditId);addSILine({desc:l.desc||'',ordered:ordered,billed:billed,qty:Math.max(0,ordered-billed),price:+l.price||0});});
+  if(!document.querySelector('#siLines .li-body'))addSILine({});
+  siCalcDue();calcSIT();}
+function calcSIT(){let t=0;document.querySelectorAll('[id^=siLQ]').forEach(el=>{const i=el.id.replace('siLQ','');const c=document.getElementById('siLC'+i);if(!c)return;const v=(+el.value||0)*(+c.value||0);const a=document.getElementById('siLA'+i);if(a)a.value=v.toFixed(2);t+=v;});
+  const mt=document.getElementById('siMT');if(mt)mt.textContent=fmt(t);siBillPanel(t);return t;}
+function siBillPanel(t){const el=document.getElementById('siBillPanel');if(!el)return;const num=document.getElementById('siSPO').value;const spo=supplierPOs.find(p=>p.num===num);
+  if(!spo){el.innerHTML='';return;}
+  const prior=siBilled(num,window._siEditId),after=prior+t,rem=(+spo.total||0)-after;
+  const ph=supplierInvoices.filter(x=>x.spoNum===num&&siIsPlaceholder(x)&&x.id!==window._siEditId);
+  el.innerHTML=`<div class="job-cost-panel"><h5>📊 Billing against ${spo.num} (${spo.supplier})</h5><div class="jc-row"><span>Supplier PO total</span><span style="color:#d97706;font-weight:700">${fmt(spo.total)}</span></div><div class="jc-row"><span style="padding-left:12px">Already invoiced</span><span>${fmt(prior)}</span></div><div class="jc-row"><span style="padding-left:12px">This invoice</span><span>${fmt(t)}</span></div><div class="jc-row" style="border-top:2px solid #bbf7d0;padding-top:8px"><span>Still unbilled after saving</span><span style="color:${rem<-0.005?'#dc2626':Math.abs(rem)<0.005?'#16a34a':'#d97706'};font-weight:700;font-size:1rem">${fmt(rem)}</span></div>${rem<-0.005?'<div class="jc-row"><span style="color:#dc2626;font-size:.72rem">⚠️ This would bill more than the PO total — you will be asked to confirm.</span><span></span></div>':''}${ph.length?'<div class="jc-row"><span style="color:#64748b;font-size:.72rem">ℹ️ This PO still carries a provisional bill for its full amount. Saving this invoice replaces it.</span><span></span></div>':''}</div>`;}
+function openNewSI(){window._siEditId=null;document.getElementById('siTitle').textContent='New Supplier Invoice';fillSISPOSel();document.getElementById('siSPO').value='';document.getElementById('siNum').value='';document.getElementById('siSup').value='';document.getElementById('siDt').value=today();document.getElementById('siTm').value='Full Payment';document.getElementById('siDue').value='';document.getElementById('siLines').innerHTML='';siLI=0;document.getElementById('siBillPanel').innerHTML='';addSILine({});calcSIT();openModal('mSI');}
+function editSI(id){const x=supplierInvoices.find(v=>v.id===id);if(!x)return;window._siEditId=id;
+  document.getElementById('siTitle').textContent='Edit Supplier Invoice';fillSISPOSel();
+  document.getElementById('siSPO').value=x.spoNum||'';document.getElementById('siNum').value=x.num||'';document.getElementById('siSup').value=x.supplier||'';
+  document.getElementById('siDt').value=x.date||'';if(x.terms)document.getElementById('siTm').value=x.terms;document.getElementById('siDue').value=x.due||'';
+  document.getElementById('siLines').innerHTML='';siLI=0;
+  const spo=supplierPOs.find(p=>p.num===x.spoNum);const ordMap={};((spo&&spo.lines)||[]).forEach(l=>{if(l&&l.desc)ordMap[l.desc]=(+l.qty||0);});
+  const src=(x.lines&&x.lines.length)?x.lines:[{desc:'',qty:0,price:0}];
+  src.forEach(l=>addSILine({desc:l.desc||'',ordered:ordMap[l.desc]!=null?ordMap[l.desc]:'',billed:siQtyBilled(x.spoNum,l.desc||'',id),qty:+l.qty||0,price:+l.price||0}));
+  calcSIT();openModal('mSI');}
+function saveSI(){
+  const num=(document.getElementById('siNum').value||'').trim();
+  const spoNum=document.getElementById('siSPO').value;
+  const sup=(document.getElementById('siSup').value||'').trim();
+  if(!spoNum){alert('Please select the Supplier PO this invoice belongs to.');return;}
+  if(!num){alert("Please enter the supplier's invoice number.");return;}
+  if(!sup){alert('Please enter the supplier name.');return;}
+  const dup=supplierInvoices.find(x=>x.id!==window._siEditId&&(x.supplier||'').trim().toLowerCase()===sup.toLowerCase()&&(x.num||'').trim().toLowerCase()===num.toLowerCase());
+  if(dup){alert('⚠️ '+sup+' already has an invoice numbered '+num+' on file (recorded against '+(dup.spoNum||'no PO')+').\n\nPlease check before saving.');return;}
+  const lines=[];let tot=0;
+  document.querySelectorAll('[id^=siLQ]').forEach(el=>{const i=el.id.replace('siLQ','');const d=document.getElementById('siLD'+i);const c=document.getElementById('siLC'+i);if(!c)return;const q=+el.value||0,pr=+c.value||0,amt=q*pr;if(((d&&d.value.trim())||amt)&&amt>0){lines.push({desc:d?d.value.trim():'',type:'product',qty:q,price:pr,amount:amt});tot+=amt;}});
+  if(!lines.length||tot<=0){alert('Please enter at least one delivered line with a quantity and a unit cost.');return;}
+  const spo=supplierPOs.find(p=>p.num===spoNum);
+  const prior=siBilled(spoNum,window._siEditId);
+  if(spo&&prior+tot>(+spo.total||0)+0.005){if(!confirm('This brings total billing on '+spoNum+' to '+fmt(prior+tot)+', which is more than the PO total of '+fmt(spo.total)+'.\n\nSave anyway?'))return;}
+  const dt=document.getElementById('siDt').value,due=document.getElementById('siDue').value,tm=document.getElementById('siTm').value;
+  if(window._siEditId){
+    const x=supplierInvoices.find(v=>v.id===window._siEditId);
+    if(x){const paid=+x.paid||0;const bal=Math.max(0,tot-paid);
+      x.num=num;x.spoNum=spoNum;x.supplier=sup;x.date=dt;x.due=due||dt;x.terms=tm;x.lines=lines;x.amount=tot;x.balance=bal;x.autoMirror=false;
+      x.status=bal<=0?'Paid':paid>0?'Partially Paid':'Outstanding';
+      window.siSave(x);logA('📄','Supplier invoice updated: '+num);}
+    window._siEditId=null;
+  }else{
+    // The provisional bill for this PO, if still untouched, is replaced by this real invoice.
+    const ph=supplierInvoices.filter(v=>v.spoNum===spoNum&&siIsPlaceholder(v));
+    if(ph.length){ph.forEach(v=>{if(window.sbDelete)window.sbDelete('supplier_invoices',v.id);});supplierInvoices=supplierInvoices.filter(v=>!(v.spoNum===spoNum&&siIsPlaceholder(v)));}
+    const x={id:idSI++,num:num,spoNum:spoNum,supplier:sup,date:dt,due:due||dt,terms:tm,status:'Outstanding',lines:lines,amount:tot,paid:0,balance:tot,autoMirror:false};
+    supplierInvoices.push(x);window.siSave(x);logA('📄','Supplier invoice '+num+' — '+sup+' — '+fmt(tot));
+  }
+  window.siRollupSPO(spoNum);closeModal('mSI');
+  setTimeout(()=>{renderSI();renderSPO();window.sbRebuildAR();renderAP();renderAPCh();updateBadges();refreshDash();},10);}
+window.deleteSI=function(id){const x=supplierInvoices.find(v=>v.id===id);if(!x)return;
+  if((+x.paid||0)>0){alert('This invoice has payments recorded against it. Please reverse the payment on the Accounts Payable page before deleting.');return;}
+  if(!confirm('Delete this supplier invoice?'))return;const sn=x.spoNum;
+  supplierInvoices=supplierInvoices.filter(v=>v.id!==id);if(window.sbDelete)window.sbDelete('supplier_invoices',id);
+  window.siRollupSPO(sn);renderSI();window.sbRebuildAR();renderAP();renderAPCh();updateBadges();refreshDash();};
+function renderSI(){const q=(document.getElementById('siSrch').value||'').toLowerCase(),st=document.getElementById('siStF').value;
+  const sf=document.getElementById('siSupF');if(sf){const prev=sf.value;const list=[...new Set(supplierInvoices.map(x=>x.supplier).filter(Boolean))].sort();sf.innerHTML='<option value="">All Suppliers</option>'+list.map(x=>`<option>${x}</option>`).join('');sf.value=prev;}
+  const supv=sf?sf.value:'';
+  const f=supplierInvoices.filter(x=>(!q||((x.num||'')+(x.supplier||'')+(x.spoNum||'')).toLowerCase().includes(q))&&(!st||(x.status||'')===st)&&(!supv||x.supplier===supv));
+  document.getElementById('siTbl').innerHTML=f.length?f.map(x=>`<tr><td style="font-weight:600;color:#d97706">${siIsPlaceholder(x)?'<span class="badge bgr" title="Provisional bill carried over from the Supplier PO">provisional</span>':(x.num||'—')}</td><td>${x.supplier||'—'}</td><td>${x.spoNum?`<span class="badge bb">${x.spoNum}</span>`:'—'}</td><td>${x.date||'—'}</td><td>${x.due||'—'}</td><td style="font-weight:700">${fmt(x.amount)}</td><td style="color:#16a34a">${fmt(x.paid)}</td><td style="color:${(+x.balance||0)>0?'#dc2626':'#16a34a'};font-weight:600">${fmt(x.balance)}</td><td><span class="badge ${sbMap[x.status]||'bgr'}">${x.status||'Outstanding'}</span></td><td style="display:flex;gap:4px;white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="editSI(${x.id})">✏️ Edit</button><button class="btn btn-danger" onclick="deleteSI(${x.id})">✕</button></td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px">No supplier invoices yet.</td></tr>';
+  document.getElementById('siFA').textContent=fmt(f.reduce((a,x)=>a+(+x.amount||0),0));
+  document.getElementById('siFP').textContent=fmt(f.reduce((a,x)=>a+(+x.paid||0),0));
+  document.getElementById('siFB').textContent=fmt(f.reduce((a,x)=>a+(+x.balance||0),0));}
+
 // ── INVOICES ──────────────────────────────────────────────
 function fillInvPOSel(){document.getElementById('iPO').innerHTML='<option value="">— Select PO —</option>'+clientPOs.map(p=>`<option value="${p.num}">${p.num} — ${p.client} (${fmt(p.total)})</option>`).join('');}
 function fillInvFromPO(){
@@ -2539,7 +2663,7 @@ function refreshDash(){
 }
 
 function logA(icon,msg){activity.unshift({icon,msg,time:new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})});if(activity.length>20)activity.pop();}
-function updateBadges(){document.getElementById('nbL').textContent=leads.filter(l=>l.status==='Active').length;document.getElementById('nbC').textContent=clientPOs.length;document.getElementById('nbI').textContent=invoices.length;document.getElementById('nbS').textContent=supplierPOs.length;document.getElementById('nbAR').textContent=arRecords.filter(r=>r.balance>0).length;document.getElementById('nbAP').textContent=apRecords.filter(r=>r.balance>0).length;document.getElementById('nbE').textContent=expenses.filter(e=>e.status==='Pending').length;document.getElementById('nbCat').textContent=catalog.length;}
+function updateBadges(){document.getElementById('nbL').textContent=leads.filter(l=>l.status==='Active').length;document.getElementById('nbC').textContent=clientPOs.length;document.getElementById('nbI').textContent=invoices.length;document.getElementById('nbS').textContent=supplierPOs.length;document.getElementById('nbAR').textContent=arRecords.filter(r=>r.balance>0).length;document.getElementById('nbAP').textContent=apRecords.filter(r=>r.balance>0).length;document.getElementById('nbE').textContent=expenses.filter(e=>e.status==='Pending').length;document.getElementById('nbCat').textContent=catalog.length;const _nbsi=document.getElementById('nbSI');if(_nbsi)_nbsi.textContent=supplierInvoices.filter(x=>(+x.balance||0)>0).length;}
 
 // ── EXCEL EXPORT ENGINE ───────────────────────────────────
 function xlsxDate(){return new Date().toISOString().slice(0,10);}
